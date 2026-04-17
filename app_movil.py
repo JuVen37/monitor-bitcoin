@@ -40,12 +40,18 @@ while True:
         # Creamos 2 columnas: una para el precio y otra para la hora
         col1, col2 = st.columns(2)
         
-        with col1:
-            # st.metric crea ese diseño de "tablero de bolsa" con flechas
+            with col1:
+            # Calculamos la variación porcentual
+            if precio_anterior > 0:
+                variacion_pct = ((nuevo_precio - precio_anterior) / precio_anterior) * 100
+            else:
+                variacion_pct = 0
+            
+            # Mostramos el precio con el porcentaje de cambio
             st.metric(
                 label="Bitcoin (USD) 🪙", 
                 value=f"${nuevo_precio:,.2f}", 
-                delta=f"${nuevo_precio - precio_anterior:,.2f}"
+                delta=f"{variacion_pct:.2f}%"
             )
         
         with col2:
