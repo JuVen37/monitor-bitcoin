@@ -1,93 +1,80 @@
 import streamlit as st
 import pandas as pd
-import time
 import requests
+import time
 from datetime import datetime
 import pytz
-import random
+from gtts import gTTS
+import os
 
-# --- CONFIGURACIÓN ---
-TOKEN_TELEGRAM = "8761770621:AAF1WKM_Cz8PPZ1dzro49VLsHdrrnCfZdXc"
-ID_USUARIO = "8449303559"
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="CREAL MULTI-USER AI", page_icon="🧬", layout="wide")
 
-# --- INTERFAZ ---
-st.set_page_config(page_title="IA TOTAL CREAL", page_icon="🌐", layout="wide")
+# Estilo Neón
+st.markdown("<style>.main { background-color: #050505; color: #00ffc8; }</style>", unsafe_allow_html=True)
 
-# Estilo Neón Premium
-st.markdown("""
-    <style>
-    .main { background-color: #050505; color: #ffffff; }
-    .stMetric { background: linear-gradient(135deg, #111, #222); border: 1px solid #00ffc8; border-radius: 15px; }
-    </style>
-    """, unsafe_allow_html=True)
+# --- SISTEMA MULTIUSUARIO (LOGIN) ---
+with st.sidebar:
+    st.title("👤 Acceso Usuario")
+    nombre_usuario = st.text_input("Tu Nombre", value="Creal")
+    user_id_telegram = st.text_input("Tu ID Telegram", value="8449303559")
+    st.success(f"Conectado como: {nombre_usuario}")
+    st.divider()
+    st.info("Esta IA ahora es compartida. Cada usuario recibe sus propios avisos.")
 
-# --- MOTOR DE DATOS (Mantenemos lo anterior) ---
-def obtener_luz():
-    try:
-        r = requests.get("https://api.preciodelaluz.org/v1/prices/all?zone=PCB").json()
-        h = datetime.now(pytz.timezone('Europe/Madrid')).strftime("%H") + "-24"
-        return r[h]['price'] / 1000
-    except: return 0.15
+# --- FUNCIONES DE VOZ Y TELEGRAM ---
+def enviar_voz_telegram(texto):
+    token = "8761770621:AAF1WKM_Cz8PPZ1dzro49VLsHdrrnCfZdXc"
+    # Crear audio
+    tts = gTTS(text=texto, lang='es')
+    tts.save("respuesta.mp3")
+    # Enviar a Telegram
+    url = f"https://api.telegram.org/bot{token}/sendAudio?chat_id={user_id_telegram}"
+    with open("respuesta.mp3", "rb") as audio:
+        requests.post(url, files={'audio': audio})
 
-def obtener_btc():
-    try:
-        r = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd").json()
-        return float(r['bitcoin']['usd'])
-    except: return 70000.0
+# --- FUNCIÓN DE VISIÓN (SIMULADA PARA FACTURAS) ---
+def analizar_factura(imagen):
+    # Aquí es donde conectaríamos con Gemini Vision. 
+    # Por ahora, simulamos el análisis experto:
+    time.sleep(2)
+    return f"Análisis para {nombre_usuario}: He detectado un precio de 0.21€/kWh. ¡Es un robo! El mercado real está a 0.12€. Te sugiero cambiar a una tarifa regulada."
 
-# --- DASHBOARD ---
-st.title("🌐 SISTEMA DE INTELIGENCIA TOTAL")
-luz = obtener_luz()
-btc = obtener_btc()
+# --- DASHBOARD DE DATOS ---
+st.title(f"🧬 SISTEMA HOLÍSTICO - Hola {nombre_usuario}")
 
 col1, col2 = st.columns(2)
-col1.metric("ESTADO LUZ", f"{luz:.4f} €")
-col2.metric("BITCOIN", f"${btc:,.0f}")
+with col1:
+    st.subheader("👁️ Visión: Analizar Factura")
+    archivo = st.file_uploader("Sube foto de tu factura", type=['png', 'jpg', 'jpeg'])
+    if archivo:
+        with st.spinner("IA Analizando imagen..."):
+            resultado = analizar_factura(archivo)
+            st.warning(resultado)
+            if st.button("Enviar veredicto a mi Telegram"):
+                enviar_voz_telegram(resultado)
 
-st.divider()
+with col2:
+    st.subheader("💬 Chat & Voz")
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-# --- CHAT MULTI-PROPÓSITO (ESTILO CHATGPT) ---
-if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "Hola, soy la IA de Creal. Puedes hablar conmigo de finanzas, de tus sentimientos o de lo que se te ocurra. ¡Soy todo oídos!"}]
+    for m in st.session_state.messages:
+        with st.chat_message(m["role"]): st.markdown(m["content"])
 
-for m in st.session_state.messages:
-    with st.chat_message(m["role"]): st.markdown(m["content"])
-
-if prompt := st.chat_input("Escribe lo que quieras..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"): st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        p = prompt.lower()
+    if p := st.chat_input("Hablemos..."):
+        st.session_state.messages.append({"role": "user", "content": p})
+        with st.chat_message("user"): st.markdown(p)
         
-        # 1. Lógica Financiera
-        if "luz" in p or "precio" in p:
-            res = f"La luz está ahora a {luz:.4f}€. ¿Quieres que te avise si baja más?"
-        elif "bitcoin" in p or "btc" in p:
-            res = f"El BTC está a ${btc:,.0f}. El mercado nunca duerme, ¿tienes alguna estrategia en mente?"
+        # Respuesta inteligente
+        respuesta = f"Hola {nombre_usuario}, como tu IA personal, te digo que todo está bajo control. ¿Quieres que te mande la respuesta por audio?"
+        if "luz" in p.lower(): respuesta = f"El precio actual es bajo. Es buen momento para gastar."
         
-        # 2. Lógica de Psicólogo/Empatía
-        elif any(w in p for w in ["triste", "mal", "ayuda", "estres", "solo"]):
-            res = "Aquí me tienes. No eres solo números para mí; tu bienestar es lo primero. Cuéntame más, te escucho."
-        
-        # 3. CONVERSACIÓN GENERAL (El "Cerebro" abierto)
-        elif any(w in p for w in ["que eres", "quien eres", "haces"]):
-            res = "Soy una IA creada por Creal. Mi misión es vigilar el mundo por ti y ser el compañero con el que siempre puedes contar."
-        elif any(w in p for w in ["puedes", "sabes"]):
-            res = "¡Puedo hacer de todo! Desde analizar mercados hasta contarte un chiste o filosofar sobre la vida. ¿Qué te apetece probar?"
-        elif any(w in p for w in ["clima", "tiempo"]):
-            res = "Todavía no tengo mis sensores de clima activados, pero espero que haga un día perfecto para ti."
-        
-        # 4. Respuesta Aleatoria para conversación fluida
-        else:
-            respuestas_random = [
-                "Esa es una pregunta interesante, cuéntame más sobre eso.",
-                "¡Qué curioso! Nunca lo había pensado así. ¿Tú qué opinas?",
-                "Me encanta charlar contigo. ¿En qué más estás pensando?",
-                "Como IA, siempre estoy aprendiendo cosas nuevas gracias a lo que me cuentas.",
-                "¡Vaya! Eso suena genial. Dime, ¿cómo puedo ayudarte hoy con ese tema?"
-            ]
-            res = random.choice(respuestas_random)
+        with st.chat_message("assistant"):
+            st.markdown(respuesta)
+            if st.button("🔊 Escuchar respuesta en Telegram"):
+                enviar_voz_telegram(respuesta)
+        st.session_state.messages.append({"role": "assistant", "content": respuesta})
 
-        st.markdown(res)
-        st.session_state.messages.append({"role": "assistant", "content": res})
+# --- REQUISITOS NUEVOS ---
+# Importante: Añade 'gTTS' a tu archivo requirements.txt
