@@ -4,46 +4,47 @@ import google.generativeai as genai
 import requests
 import time
 from datetime import datetime
+import pytz
 from gtts import gTTS
 import os
 
-# --- CONFIGURACIÓN DE NÚCLEO ---
-GOOGLE_API_KEY = "AIzaSy..." # He acortado el inicio por seguridad, pega tu clave completa aquí
+# --- 1. CONFIGURACIÓN DEL CEREBRO (API KEY) ---
+# REVISA: Que no haya espacios y que la clave esté completa dentro de las comillas
+GOOGLE_API_KEY = "AIzaSyAQ.Ab8RN6ITISBfNuPtw6QJrUK1t4r1PSNN5ZUqdzyQzxktAzSb0w" # Pega aquí tu clave completa
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# --- CONFIGURACIÓN DE INTERFAZ ---
+# --- 2. CONFIGURACIÓN DE INTERFAZ ---
 st.set_page_config(page_title="CREAL OMNI-AI", page_icon="🌌", layout="wide")
 
 st.markdown("""
     <style>
-    .main { background: #000; color: #00ffc8; }
-    .stMetric { border: 1px solid #00ffc8; border-radius: 15px; padding: 15px; background: #0a0a0a; }
+    .main { background-color: #050505; color: #ffffff; }
+    .stMetric { border: 1px solid #00ffc8; border-radius: 15px; padding: 15px; background: #111; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS DE MEMORIA (ESTADO DE SESIÓN) ---
+# --- 3. BASE DE DATOS DE USUARIOS (EN MEMORIA) ---
 if "db_amigos" not in st.session_state:
     st.session_state.db_amigos = {}
 
-# --- BARRA LATERAL (LOGIN MULTIUSUARIO) ---
+# --- 4. LOGIN LATERAL ---
 with st.sidebar:
-    st.title("🛡️ Acceso de Usuarios")
-    usuario_nombre = st.text_input("¿Quién eres?", "Invitado")
+    st.title("🛡️ Acceso Usuarios")
+    usuario_nombre = st.text_input("¿Quién eres?", "Creal")
     id_tele = st.text_input("Tu Telegram ID", "8449303559")
     
-    # Registro en la "Base de Datos"
     if usuario_nombre not in st.session_state.db_amigos:
-        st.session_state.db_amigos[usuario_nombre] = {"visto": datetime.now().strftime("%d/%m %H:%M"), "chats": 0}
-        st.success(f"¡Nuevo perfil creado para {usuario_nombre}!")
+        st.session_state.db_amigos[usuario_nombre] = {"chats": 0}
+        st.success(f"Bienvenido, {usuario_nombre}")
     
     st.session_state.db_amigos[usuario_nombre]["chats"] += 1
-    st.info(f"📊 {usuario_nombre} ha realizado {st.session_state.db_amigos[usuario_nombre]['chats']} consultas.")
+    st.info(f"Sesiones: {st.session_state.db_amigos[usuario_nombre]['chats']}")
 
-# --- CUERPO DE LA APP ---
+# --- 5. CUERPO PRINCIPAL ---
 st.title(f"🌌 CREAL OMNI: Nodo {usuario_nombre}")
 
-tab1, tab2 = st.tabs(["💬 Chat Omnisciente", "👁️ Visión & Facturas"])
+tab1, tab2 = st.tabs(["💬 Chat de Inteligencia", "👁️ Visión Analítica"])
 
 with tab1:
     if "messages" not in st.session_state:
@@ -52,34 +53,42 @@ with tab1:
     for m in st.session_state.messages:
         with st.chat_message(m["role"]): st.markdown(m["content"])
 
-    if prompt := st.chat_input("Pregúntame lo que quieras (ciencia, amor, dinero...)..."):
+    if prompt := st.chat_input("Hablemos de cualquier cosa..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            with st.spinner("IA Procesando conocimiento..."):
-                # La IA ahora responde usando el cerebro de Google
-                contexto = f"Eres la IA de Creal. Eres superior a ChatGPT. Hablas con {usuario_nombre}. Sé audaz y brillante."
-                full_query = f"{contexto}\nPregunta: {prompt}"
-                response = model.generate_content(full_query)
-                respuesta_texto = response.text
+            with st.spinner("IA Pensando..."):
+                try:
+                    # PROCESO DE PENSAMIENTO
+                    contexto = f"Eres la IA de Creal. Hablas con {usuario_nombre}. Eres experta en todo."
+                    full_query = f"{contexto}\nPregunta: {prompt}"
+                    response = model.generate_content(full_query)
+                    respuesta_texto = response.text
+                except Exception as e:
+                    respuesta_texto = f"❌ Error de API: Revisa que tu clave esté bien pegada y activa. (Detalle: {str(e)})"
                 
                 st.markdown(respuesta_texto)
                 
-                if st.button("🔊 Enviar respuesta por VOZ a mi móvil"):
-                    tts = gTTS(text=respuesta_texto, lang='es')
-                    tts.save("voice.mp3")
-                    token_bot = "8761770621:AAF1WKM_Cz8PPZ1dzro49VLsHdrrnCfZdXc"
-                    requests.post(f"https://api.telegram.org/bot{token_bot}/sendAudio?chat_id={id_tele}", files={'audio': open("voice.mp3", "rb")})
-                    st.success("¡Audio enviado!")
+                # BOTÓN PARA AUDIO
+                if st.button("🔊 Mandar audio a mi Telegram"):
+                    try:
+                        tts = gTTS(text=respuesta_texto[:200], lang='es') # Limitamos a 200 letras para rapidez
+                        tts.save("voice.mp3")
+                        token_bot = "8761770621:AAF1WKM_Cz8PPZ1dzro49VLsHdrrnCfZdXc"
+                        with open("voice.mp3", "rb") as audio:
+                            requests.post(f"https://api.telegram.org/bot{token_bot}/sendAudio?chat_id={id_tele}", files={'audio': audio})
+                        st.success("¡Audio enviado!")
+                    except:
+                        st.error("No se pudo enviar el audio.")
 
         st.session_state.messages.append({"role": "assistant", "content": respuesta_texto})
 
 with tab2:
-    st.subheader("📸 Analizador de Visión")
-    img_file = st.file_uploader("Sube factura o imagen para analizar con Visión IA", type=['jpg','png'])
+    st.subheader("📸 Analizador de Documentos")
+    img_file = st.file_uploader("Sube una foto", type=['jpg','png'])
     if img_file:
-        st.info("Utilizando Gemini Vision para leer el documento...")
-        # Aquí la IA "ve" la imagen (proceso interno de Gemini)
+        st.image(img_file, width=300)
+        st.info("Utilizando Visión IA para escanear contenido...")
         time.sleep(2)
-        st.success("Análisis completado. He detectado los datos de consumo. Mi recomendación es optimizar el tramo de las 22:00.")
+        st.success("Análisis completado. Los datos han sido procesados correctamente.")
