@@ -11,9 +11,19 @@ st.write("Vigilancia 24/7 desde la nube")
 # Función que hace el trabajo del "Obrero"
 def obtener_precio_crypto():
     url = "https://api.binance.com/api/3/ticker/price?symbol=BTCUSDT"
-    respuesta = requests.get(url)
-    datos = respuesta.json()
-    return float(datos['price'])
+    try:
+        respuesta = requests.get(url)
+        datos = respuesta.json()
+        
+        # Verificamos si 'price' está en los datos antes de usarlo
+        if 'price' in datos:
+            return float(datos['price'])
+        else:
+            st.error(f"Binance respondió algo inesperado: {datos}")
+            return 0.0
+    except Exception as e:
+        st.error(f"Error de conexión: {e}")
+        return 0.0
 
 # Inicializamos una lista en la memoria de la web para guardar los precios
 if 'historial' not in st.session_state:
