@@ -5,43 +5,38 @@ import requests
 from datetime import datetime
 import pytz
 
-# 1. Configuración de la "Nave"
-st.set_page_config(page_title="IA Maestra Juan", page_icon="🧠", layout="wide")
+# --- CONFIGURACIÓN DE TU IA ---
+TOKEN_TELEGRAM = "8761770621:AAF1WKM_Cz8PPZ1dzro49VLsHdrrnCfZdXc"
+ID_USUARIO = "8449303559"
 
-# Estilo para que se vea premium
-st.markdown("""
-    <style>
-    .main { background-color: #0e1117; }
-    .stMetric { background-color: #161b22; border-radius: 10px; padding: 15px; }
-    </style>
-    """, unsafe_allow_html=True)
+def enviar_aviso_telegram(mensaje):
+    url = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/sendMessage?chat_id={ID_USUARIO}&text={mensaje}"
+    try:
+        requests.get(url)
+    except:
+        pass
+
+# --- INTERFAZ STREAMLIT ---
+st.set_page_config(page_title="IA Maestra Creal", page_icon="🧠", layout="wide")
 
 st.title("🧠 IA de Gestión Proactiva")
-st.subheader("Tu Gemelo Digital analizando oportunidades...")
+st.write(f"Conectado con el Bot: **CrealMasterIA_bot**")
 
-# 2. El Motor de la Luz (API simplificada para el ejemplo)
 def obtener_datos_luz():
-    # En un entorno real usaríamos la API de ESIOS, aquí simulamos la lógica "top"
-    # Simulamos precios del día para calcular la media
+    # Precios simulados para forzar la "Ganga" y que veas el mensaje en el móvil
     precios_dia = [0.12, 0.15, 0.18, 0.22, 0.25, 0.20, 0.14, 0.10, 0.08, 0.11, 0.13, 0.16]
-    precio_actual = 0.11 # Esto vendría de la API según la hora
+    precio_actual = 0.07  # Forzamos precio bajo para el test
     media = sum(precios_dia) / len(precios_dia)
-    
     diferencia = ((precio_actual - media) / media)
     
     if diferencia < -0.20:
         estado = "🔥 ¡GANGA TOTAL!"
-        color = "inverse"
     elif diferencia < 0:
         estado = "🟢 Barato"
-        color = "normal"
     else:
-        estado = "🔴 Caro (Evitar gasto)"
-        color = "off"
-    
+        estado = "🔴 Caro"
     return precio_actual, estado, media
 
-# 3. El Motor de Cripto (Tu base original)
 def obtener_precio_crypto():
     url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
     try:
@@ -49,45 +44,35 @@ def obtener_precio_crypto():
         return float(r.json().get('bitcoin', {}).get('usd', 0))
     except: return 0
 
-# --- Lógica de Sesión ---
-if 'historial_btc' not in st.session_state:
-    st.session_state.historial_btc = [obtener_precio_crypto()]
+# Para no saturar el móvil, solo avisamos una vez cada hora
+if 'ultima_notificacion' not in st.session_state:
+    st.session_state.ultima_notificacion = 0
 
 placeholder = st.empty()
 
-# 4. El Bucle de la Super-IA
 while True:
     btc = obtener_precio_crypto()
-    luz, etiqueta_luz, media_luz = obtener_datos_luz()
+    luz, etiqueta, media = obtener_datos_luz()
+    ahora = time.time()
     
     with placeholder.container():
-        # FILA 1: Los ojos de la IA
         col1, col2 = st.columns(2)
-        
         with col1:
-            st.metric("LUZ ACTUAL", f"{luz} €/kWh", etiqueta_luz)
-            st.caption(f"Media del día: {media_luz:.2f} €/kWh")
-            
+            st.metric("LUZ ACTUAL", f"{luz} €/kWh", etiqueta)
+            st.caption(f"Media diaria: {media:.2f} €/kWh")
         with col2:
-            prev_btc = st.session_state.historial_btc[-1]
-            diff_btc = btc - prev_btc
-            st.metric("BITCOIN", f"${btc:,.2f}", f"{diff_btc:,.2f}$")
+            st.metric("BITCOIN", f"${btc:,.2f}")
         
-        st.divider()
-        
-        # FILA 2: El Cerebro (La parte que hace flipar a la gente)
-        st.info("🤖 **Análisis del Gemelo Digital:**")
-        
-        if etiqueta_luz == "🔥 ¡GANGA TOTAL!" and diff_btc < 0:
-            st.success("🎯 OPORTUNIDAD MAESTRA: La luz está regalada y el Bitcoin ha bajado. Es el momento ideal para mover ficha.")
-        elif etiqueta_luz == "🔴 Caro (Evitar gasto)":
-            st.warning("⚠️ SUGERENCIA: Desconecta dispositivos no esenciales. El precio de la energía no compensa el gasto ahora mismo.")
-        else:
-            st.write("🔎 Buscando anomalías en el mercado... Todo estable.")
+        # --- EL CEREBRO DE TU IA ---
+        if etiqueta == "🔥 ¡GANGA TOTAL!":
+            # Si han pasado más de 60 minutos desde el último aviso
+            if (ahora - st.session_state.ultima_notificacion > 3600):
+                msj = f"🚀 ¡HOLA CREAL! Tu IA ha detectado una GANGA: Luz a {luz}€/kWh. BTC está a ${btc:,.2f}. ¡Aprovecha ahora!"
+                enviar_aviso_telegram(msj)
+                st.session_state.ultima_notificacion = ahora
+                st.success("📲 ¡Aviso enviado a tu Telegram!")
 
-        # Gráfica de Bitcoin
-        st.session_state.historial_btc.append(btc)
-        if len(st.session_state.historial_btc) > 20: st.session_state.historial_btc.pop(0)
-        st.line_chart(st.session_state.historial_btc)
-
-    time.sleep(15)
+        # Gráfico histórico simulado
+        st.line_chart([btc-50, btc+20, btc-80, btc])
+    
+    time.sleep(30)
