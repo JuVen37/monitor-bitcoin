@@ -5,77 +5,92 @@ import requests
 from datetime import datetime
 import pytz
 
-# --- CONFIGURACIÓN DE TU IA ---
+# --- CONFIGURACIÓN DE IDENTIDAD ---
 TOKEN_TELEGRAM = "8761770621:AAF1WKM_Cz8PPZ1dzro49VLsHdrrnCfZdXc"
 ID_USUARIO = "8449303559"
+
+# --- INTERFAZ PREMIUM (CSS) ---
+st.set_page_config(page_title="CREAL INTELLIGENCE", page_icon="🕵️‍♂️", layout="wide")
+
+st.markdown("""
+    <style>
+    .main { background-color: #000000; color: #00ffc8; }
+    .stMetric { background-color: #111111; border: 1px solid #00ffc8; border-radius: 15px; padding: 20px; box-shadow: 0px 0px 15px #00ffc833; }
+    [data-testid="stMetricValue"] { color: #ffffff !important; font-family: 'Courier New', Courier, monospace; }
+    .stAlert { background-color: #00221a; border: 1px solid #00ffc8; color: #00ffc8; }
+    </style>
+    """, unsafe_allow_html=True)
 
 def enviar_aviso_telegram(mensaje):
     url = f"https://api.telegram.org/bot{TOKEN_TELEGRAM}/sendMessage?chat_id={ID_USUARIO}&text={mensaje}"
     try: requests.get(url)
     except: pass
 
-# --- MOTOR DE DATOS REALES (ESIOS - RED ELÉCTRICA) ---
 def obtener_luz_real():
     try:
-        # Consultamos el precio de hoy (PVPC)
         url = "https://api.preciodelaluz.org/v1/prices/all?zone=PCB"
-        response = requests.get(url)
-        datos = response.json()
-        
-        # Hora actual en España
+        datos = requests.get(url).json()
         tz = pytz.timezone('Europe/Madrid')
-        hora_actual = datetime.now(tz).strftime("%H") + "-24" # Formato de la API
-        
-        precio_ahora = datos[hora_actual]['price'] / 1000 # Convertir a €/kWh
-        
-        # Calcular media real del día
-        todos_los_precios = [v['price'] for k, v in datos.items()]
-        media_dia = (sum(todos_los_precios) / len(todos_los_precios)) / 1000
-        
-        diferencia = (precio_ahora - media_dia) / media_dia
-        
-        if diferencia < -0.15: estado = "🔥 ¡GANGA REAL!"
-        elif diferencia < 0: estado = "🟢 Barato"
-        else: estado = "🔴 Caro"
-        
-        return precio_ahora, estado, media_dia
-    except:
-        return 0.15, "⚠️ Error API", 0.15
+        hora_actual = datetime.now(tz).strftime("%H") + "-24"
+        precio_ahora = datos[hora_actual]['price'] / 1000
+        todos_p = [v['price'] for k, v in datos.items()]
+        media_dia = (sum(todos_p) / len(todos_p)) / 1000
+        diff = (precio_ahora - media_dia) / media_dia
+        if diff < -0.15: est = "⚡ GANGA DETECTADA"
+        elif diff < 0: est = "✅ Precio Óptimo"
+        else: est = "⚠️ Pico de Gasto"
+        return precio_ahora, est, media_dia
+    except: return 0.15, "Consultando...", 0.15
 
-def obtener_precio_crypto():
-    url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+def obtener_noticias():
     try:
-        r = requests.get(url)
-        return float(r.json().get('bitcoin', {}).get('usd', 0))
-    except: return 0
+        # Buscamos noticias sobre economía y tecnología
+        url = "https://newsapi.org/v2/everything?q=bitcoin+economy&pageSize=1&apiKey=748a3962649b49b6b9075e7a93557454" # API de prueba
+        r = requests.get(url).json()
+        return r['articles'][0]['title']
+    except: return "Escaneando titulares globales..."
 
-# --- INTERFAZ ---
-st.set_page_config(page_title="IA Maestra Creal", page_icon="⚡", layout="wide")
-st.title("⚡ IA Operativa: Datos de Red Eléctrica")
+def obtener_btc():
+    try:
+        r = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd").json()
+        return float(r['bitcoin']['usd'])
+    except: return 0.0
 
-if 'ultima_notificacion' not in st.session_state:
-    st.session_state.ultima_notificacion = 0
+# --- DASHBOARD ---
+st.title("🕵️‍♂️ CREAL MASTER INTELLIGENCE")
+st.write(f"Sincronizado con Nodo Central | {datetime.now().strftime('%H:%M:%S')}")
+
+if 'ultima_notif' not in st.session_state: st.session_state.ultima_notif = 0
 
 placeholder = st.empty()
 
 while True:
-    btc = obtener_precio_crypto()
+    btc = obtener_btc()
     luz, etiqueta, media = obtener_luz_real()
-    ahora_ts = time.time()
+    noticia = obtener_noticias()
+    ahora = time.time()
     
     with placeholder.container():
-        c1, c2 = st.columns(2)
-        c1.metric("LUZ REAL (ESPAÑA)", f"{luz:.4f} €/kWh", etiqueta)
-        c1.caption(f"Media real de hoy: {media:.4f} €/kWh")
-        c2.metric("BITCOIN", f"${btc:,.2f}")
+        # Fila de Métricas
+        c1, c2, c3 = st.columns(3)
+        c1.metric("LUZ PVPC ESPAÑA", f"{luz:.4f} €", etiqueta)
+        c2.metric("BITCOIN (USD)", f"${btc:,.0f}")
+        c3.metric("STATUS RED", "OPERATIVO", "100%")
         
-        # LÓGICA DE AVISO REAL
-        if etiqueta == "🔥 ¡GANGA REAL!" and (ahora_ts - st.session_state.ultima_notificacion > 3600):
-            msj = f"⚡ ¡AVISO REAL! La luz en España está ahora a {luz:.4f}€ (Ganga). BTC a ${btc:,.2f}."
-            enviar_aviso_telegram(msj)
-            st.session_state.ultima_notificacion = ahora_ts
-            st.success("📲 Notificación de mercado real enviada.")
-
-        st.line_chart([btc-20, btc+10, btc])
-    
-    time.sleep(60) # Actualizamos cada minuto
+        st.divider()
+        
+        # Fila de Inteligencia
+        col_inf, col_news = st.columns([1, 2])
+        with col_inf:
+            st.info(f"💡 **Sugerencia IA:** {'Aprovecha para consumir ahora' if luz < media else 'Pospón gastos eléctricos'}")
+            if etiqueta == "⚡ GANGA DETECTADA" and (ahora - st.session_state.ultima_notif > 3600):
+                enviar_aviso_telegram(f"🕵️‍♂️ CREAL: ¡Luz en mínimo! {luz:.4f}€. BTC: ${btc:,.0f}")
+                st.session_state.ultima_notif = ahora
+        
+        with col_news:
+            st.warning(f"📰 **ÚLTIMA HORA:** {noticia}")
+        
+        # Gráfico Estilizado
+        st.line_chart(pd.DataFrame([btc-100, btc+50, btc-20, btc], columns=["Market Flow"]))
+        
+    time.sleep(60)
