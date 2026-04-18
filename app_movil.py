@@ -4,7 +4,6 @@ import json
 from gtts import gTTS
 
 # --- 1. CONFIGURACIÓN SEGURA ---
-# Ahora leemos AMBAS claves desde la caja fuerte (Secrets)
 if "GOOGLE_API_KEY" in st.secrets and "TELEGRAM_TOKEN" in st.secrets:
     API_KEY = st.secrets["GOOGLE_API_KEY"].strip()
     TG_TOKEN = st.secrets["TELEGRAM_TOKEN"].strip()
@@ -31,40 +30,48 @@ st.set_page_config(page_title="CREAL OMNI", page_icon="🌌")
 st.title("🌌 CREAL OMNI-AI")
 st.caption("⚡ Conectado a Gemini 2.5 Flash")
 
-# Ya sabemos que este es tu ID real, déjalo así
 nombre = st.sidebar.text_input("Tu Nombre", "Creal")
 tele_id = st.sidebar.text_input("ID Telegram", "8449303559")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Dibujamos el historial de mensajes
 for m in st.session_state.messages:
-    with st.chat_message(m["role"]): st.markdown(m["content"])
+    with st.chat_message(m["role"]): 
+        st.markdown(m["content"])
 
-if p := st.chat_input("Escribe algo y pide el audio..."):
-    st.session_state.messages.append({"role": "user", "content": p})
-    with st.chat_message("user"): st.markdown(p)
-
-    with st.chat_message("assistant"):
-        res = hablar_con_gemini(f"Responde a {nombre}: {p}")
-        st.markdown(res)
-        
-        if "🚫" not in res and "❌" not in res:
-            if st.button("🔊 Enviar Audio a Telegram"):
+# Si el ÚLTIMO mensaje es de la IA, mostramos el botón de forma fija
+if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
+    ultimo_mensaje = st.session_state.messages[-1]["content"]
+    
+    if "🚫" not in ultimo_mensaje and "❌" not in ultimo_mensaje:
+        # El botón ahora está "suelto", no desaparecerá al pulsarlo
+        if st.button("🔊 Enviar Última Respuesta por Audio"):
+            with st.spinner("Creando y enviando audio..."):
                 try:
-                    tts = gTTS(text=res[:250], lang='es')
+                    tts = gTTS(text=ultimo_mensaje[:250], lang='es')
                     tts.save("voice.mp3")
-                    # Usamos el token escondido
-                    tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendAudio?chat_id={tele_id}"
                     
+                    tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendAudio?chat_id={tele_id}"
                     with open("voice.mp3", "rb") as audio_file:
                         r_tg = requests.post(tg_url, files={'audio': audio_file})
                     
                     if r_tg.status_code == 200:
-                        st.success("✅ ¡Audio enviado con éxito a tu móvil!")
+                        st.success("✅ ¡Audio enviado con éxito a tu Telegram!")
                     else:
                         st.error(f"❌ Error de Telegram: {r_tg.text}")
                 except Exception as e:
                     st.error(f"❌ Error interno de audio: {str(e)}")
 
+# Caja de chat (Cuando escribes, recarga la página para que salga arriba)
+if p := st.chat_input("Escribe algo a Creal..."):
+    # Guardamos tu mensaje
+    st.session_state.messages.append({"role": "user", "content": p})
+    
+    # Obtenemos y guardamos la respuesta
+    res = hablar_con_gemini(f"Responde a {nombre}: {p}")
     st.session_state.messages.append({"role": "assistant", "content": res})
+    
+    # Recargamos la app para que aparezca el mensaje y el botón
+    st.rerun()
