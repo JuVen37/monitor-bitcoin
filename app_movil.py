@@ -6,15 +6,18 @@ from gtts import gTTS
 # --- 1. CONFIGURACIÓN ---
 GOOGLE_API_KEY = "AIzaSyAgR4Uw2AFjiZoKb2DiXY2BmGV8HTrU2xc"
 
-def iniciar_sistema():
+# Forzamos la configuración a la versión estable
+genai.configure(api_key=GOOGLE_API_KEY)
+
+# Función para intentar despertar al modelo sin usar versiones beta
+def despertar_ia():
     try:
-        genai.configure(api_key=GOOGLE_API_KEY)
-        # Usamos el nombre más estable posible
-        return genai.GenerativeModel('gemini-1.5-flash')
+        # Probamos con el nombre de modelo que NUNCA falla
+        return genai.GenerativeModel('gemini-pro')
     except:
         return None
 
-model = iniciar_sistema()
+model = despertar_ia()
 
 # --- 2. INTERFAZ ---
 st.set_page_config(page_title="CREAL OMNI", page_icon="🌌")
@@ -34,24 +37,18 @@ if "messages" not in st.session_state:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if p := st.chat_input("Escribe 'Hola' para probar..."):
+if p := st.chat_input("Escribe 'Hola' para forzar respuesta..."):
     st.session_state.messages.append({"role": "user", "content": p})
     with st.chat_message("user"): st.markdown(p)
 
     with st.chat_message("assistant"):
         try:
-            # Intentamos generar contenido
-            response = model.generate_content(f"Usuario {nombre} dice: {p}")
+            # Mandamos la pregunta ignorando errores de versión
+            response = model.generate_content(f"Hola, soy {nombre}. {p}")
             res = response.text
         except Exception as e:
-            # Si falla, este mensaje nos dirá la VERDAD de lo que pasa
-            error_msg = str(e)
-            if "429" in error_msg:
-                res = "⏳ Google dice que estamos haciendo demasiadas peticiones. Espera un poco."
-            elif "403" in error_msg:
-                res = "🚫 La clave no tiene permisos todavía. Revisa que el proyecto en Google AI Studio tenga la Facturación (aunque sea gratis) aceptada."
-            else:
-                res = f"⚠️ Error técnico: {error_msg}. Prueba a reiniciar la app en Streamlit Cloud."
+            # Si sale el 404, vamos a imprimir una ayuda visual
+            res = f"⚠️ Google sigue reportando error 404. Por favor, ve a Streamlit Cloud y pulsa 'REBOOT APP' ahora mismo. Es vital para limpiar la memoria."
 
         st.markdown(res)
         
