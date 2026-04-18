@@ -46,31 +46,31 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "assis
     ultimo_mensaje = st.session_state.messages[-1]["content"]
     
     if "🚫" not in ultimo_mensaje and "❌" not in ultimo_mensaje:
-        if st.button("🔊 Enviar Audio (MP3) a Telegram"):
-            with st.spinner("Preparando el audio..."):
+        if st.button("🔊 Enviar Archivo de Audio a Telegram"):
+            with st.spinner("Preparando el archivo..."):
                 try:
-                    # 1. Limpieza extrema: Quitamos emojis y símbolos raros que rompen la voz
+                    # 1. Limpieza extrema
                     texto_limpio = re.sub(r'[^\w\s.,;:!?¿¡]', '', ultimo_mensaje)
                     
                     if len(texto_limpio.strip()) == 0:
-                        texto_limpio = "No puedo leer este mensaje en voz alta."
+                        texto_limpio = "Error en el texto, pero el audio funciona."
 
                     # 2. Generamos el audio MP3
                     tts = gTTS(text=texto_limpio[:250], lang='es')
                     tts.save("voice.mp3")
                     
-                    # 3. VERIFICACIÓN: ¿El archivo está vacío?
+                    # 3. VERIFICACIÓN
                     peso_archivo = os.path.getsize("voice.mp3")
-                    if peso_archivo < 1000:  # Si pesa menos de 1KB, está vacío
+                    if peso_archivo < 1000:
                         st.error("❌ El generador de voz ha fallado. El archivo está vacío.")
                     else:
-                        # 4. Enviamos como AUDIO normal (compatible con MP3)
-                        tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendAudio?chat_id={tele_id}"
+                        # 4. ENVIAMOS COMO DOCUMENTO (Esto fuerza a tu móvil a usar su propio reproductor)
+                        tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendDocument?chat_id={tele_id}"
                         with open("voice.mp3", "rb") as audio_file:
-                            r_tg = requests.post(tg_url, files={'audio': audio_file})
+                            r_tg = requests.post(tg_url, files={'document': audio_file})
                         
                         if r_tg.status_code == 200:
-                            st.success(f"✅ ¡Audio enviado con éxito! (Peso: {peso_archivo / 1000} KB)")
+                            st.success(f"✅ ¡Archivo de audio enviado! (Peso: {peso_archivo / 1000} KB)")
                         else:
                             st.error(f"❌ Error de Telegram: {r_tg.text}")
                 except Exception as e:
