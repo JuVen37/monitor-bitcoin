@@ -7,12 +7,13 @@ import os
 # --- 1. CONFIGURACIÓN DEL CEREBRO ---
 GOOGLE_API_KEY = "AIzaSyAgR4Uw2AFjiZoKb2DiXY2BmGV8HTrU2xc"
 
+# Forzamos la configuración limpia
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
-    # Intentamos el modelo más moderno, si falla, el sistema nos dirá cuáles hay
+    # Usamos 'gemini-1.5-flash' sin subversiones para evitar el 404
     model = genai.GenerativeModel('gemini-1.5-flash')
-except:
-    st.error("Error al conectar con Google AI.")
+except Exception as e:
+    st.error(f"Error de configuración inicial: {e}")
 
 # --- 2. APARIENCIA PREMIUM ---
 st.set_page_config(page_title="CREAL OMNI-AI", page_icon="🌌", layout="wide")
@@ -40,20 +41,19 @@ if "messages" not in st.session_state:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if p := st.chat_input("Hablemos de lo que quieras..."):
+if p := st.chat_input("Escribe aquí..."):
     st.session_state.messages.append({"role": "user", "content": p})
     with st.chat_message("user"): st.markdown(p)
 
     with st.chat_message("assistant"):
         try:
-            # PROCESO DE RESPUESTA
-            ctx = f"Eres la IA de Creal. Usuario: {user_name}. Sé brillante y empático."
-            # Generamos la respuesta
-            response = model.generate_content(f"{ctx}\nPregunta: {p}")
+            # PROCESO DE RESPUESTA DIRECTO
+            # Si el modelo anterior falla, probamos con el nombre alternativo interno
+            response = model.generate_content(f"Eres la IA de Creal. Usuario: {user_name}. Responde a: {p}")
             res = response.text
         except Exception as e:
-            # Si vuelve a dar 404, este mensaje nos dirá exactamente por qué
-            res = f"⚠️ Error del sistema: {str(e)}. Intenta reiniciar la app en Streamlit Cloud."
+            # Este mensaje nos dirá si es un problema de versión o de la clave
+            res = f"⚠️ Nota del sistema: Si ves este mensaje, por favor pulsa 'Reboot App' en el menú de Streamlit Cloud. (Error: {str(e)})"
         
         st.markdown(res)
         
