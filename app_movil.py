@@ -5,31 +5,44 @@ from gtts import gTTS
 
 # --- 1. CONFIGURACIÓN ---
 API_KEY = "AIzaSyAgR4Uw2AFjiZoKb2DiXY2BmGV8HTrU2xc"
-# CAMBIO CLAVE: Usamos /v1/ en lugar de /v1beta/
-URL = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+
+def obtener_modelo_valido():
+    # Paso A: Listar todos los modelos disponibles para tu clave
+    url_list = f"https://generativelanguage.googleapis.com/v1/models?key={API_KEY}"
+    try:
+        r = requests.get(url_list)
+        if r.status_code == 200:
+            modelos = r.json().get('models', [])
+            # Buscamos uno que permita generar contenido (pueden ser flash o pro)
+            for m in modelos:
+                if "generateContent" in m.get('supportedGenerationMethods', []):
+                    return m['name'] # Retorna algo como 'models/gemini-1.5-flash-latest'
+        return None
+    except:
+        return None
 
 def hablar_con_gemini(mensaje):
-    payload = {
-        "contents": [{
-            "parts": [{"text": mensaje}]
-        }]
-    }
+    nombre_modelo = obtener_modelo_valido()
+    if not nombre_modelo:
+        return "❌ No se encontraron modelos disponibles para esta clave. Revisa Google AI Studio."
+    
+    # Paso B: Usar el modelo encontrado con la versión correcta
+    url = f"https://generativelanguage.googleapis.com/v1/{nombre_modelo}:generateContent?key={API_KEY}"
+    payload = {"contents": [{"parts": [{"text": mensaje}]}]}
     headers = {'Content-Type': 'application/json'}
     
     try:
-        r = requests.post(URL, headers=headers, data=json.dumps(payload), timeout=15)
+        r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
         if r.status_code == 200:
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         else:
-            datos_error = r.json()
-            msg = datos_error.get('error', {}).get('message', 'Error desconocido')
-            return f"🚫 Google dice: {msg}. (Código: {r.status_code})"
+            return f"🚫 Error {r.status_code}: {r.json().get('error', {}).get('message')}"
     except Exception as e:
         return f"❌ Error de conexión: {str(e)}"
 
 # --- 2. INTERFAZ ---
 st.set_page_config(page_title="CREAL OMNI", page_icon="🌌")
-st.title("🌌 CREAL OMNI-INTELLIGENCE")
+st.title("🌌 CREAL OMNI-AUTO-SCAN")
 
 with st.sidebar:
     st.title("🛡️ Nodo Central")
@@ -42,7 +55,7 @@ if "messages" not in st.session_state:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if p := st.chat_input("¿Estás ahí?"):
+if p := st.chat_input("Escribe 'Hola' para escanear..."):
     st.session_state.messages.append({"role": "user", "content": p})
     with st.chat_message("user"): st.markdown(p)
 
@@ -50,7 +63,7 @@ if p := st.chat_input("¿Estás ahí?"):
         res = hablar_con_gemini(f"Responde a {nombre}: {p}")
         st.markdown(res)
         
-        if "🚫" not in res and "❌" not in res:
+        if "❌" not in res and "🚫" not in res:
             if st.button("🔊 Enviar Audio"):
                 tts = gTTS(text=res[:250], lang='es')
                 tts.save("voice.mp3")
