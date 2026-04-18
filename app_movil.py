@@ -4,6 +4,7 @@ import json
 from gtts import gTTS
 import io
 import re
+import base64
 
 # --- 1. CONFIGURACIÓN SEGURA ---
 if "GOOGLE_API_KEY" in st.secrets:
@@ -31,7 +32,6 @@ st.set_page_config(page_title="CREAL OMNI", page_icon="🌌")
 st.title("🌌 CREAL OMNI")
 st.caption("Asistente de IA Público")
 
-# Quitamos el ID de Telegram porque ya no hace falta
 nombre = st.sidebar.text_input("¿Cómo te llamas?", "Usuario")
 st.sidebar.markdown("---")
 st.sidebar.info("💡 Escribe un mensaje y la IA generará texto y audio directamente aquí.")
@@ -39,38 +39,42 @@ st.sidebar.info("💡 Escribe un mensaje y la IA generará texto y audio directa
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Dibujamos el historial
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): 
         st.markdown(m["content"])
 
-# Caja de chat principal
 if p := st.chat_input("Pregúntale algo a Creal..."):
-    # 1. Mostramos lo que pregunta el usuario
     st.session_state.messages.append({"role": "user", "content": p})
     with st.chat_message("user"): 
         st.markdown(p)
 
-    # 2. Mostramos la respuesta de la IA y su reproductor de audio
     with st.chat_message("assistant"):
         res = hablar_con_gemini(f"Responde a {nombre}: {p}")
         st.markdown(res)
         
         if "🚫" not in res and "❌" not in res:
-            with st.spinner("Generando voz..."):
+            with st.spinner("Generando voz para móviles..."):
                 try:
-                    # Limpiamos el texto y generamos el audio en la RAM
+                    # Limpiamos el texto
                     texto_limpio = re.sub(r'[^\w\s.,;:!?¿¡]', '', res)
                     if len(texto_limpio.strip()) > 0:
+                        # Generamos audio en RAM
                         tts = gTTS(text=texto_limpio[:250], lang='es')
                         archivo_en_ram = io.BytesIO()
                         tts.write_to_fp(archivo_en_ram)
                         archivo_en_ram.seek(0)
                         
-                        # REPRODUCTOR INTEGRADO: Aparece justo debajo del texto
-                        st.audio(archivo_en_ram, format="audio/mp3")
+                        # 🎯 EL TRUCO INFALIBLE: Convertimos el audio a texto Base64
+                        base64_audio = base64.b64encode(archivo_en_ram.read()).decode("utf-8")
+                        
+                        # Creamos un reproductor HTML nativo
+                        audio_html = f'<audio controls><source src="data:audio/mp3;base64,{base64_audio}" type="audio/mp3"></audio>'
+                        
+                        # Lo mostramos en la pantalla
+                        st.markdown(audio_html, unsafe_allow_html=True)
+                        
                 except Exception as e:
-                    st.error("No se pudo generar el audio para este mensaje.")
+                    # Ahora si falla, te dirá el motivo exacto en rojo
+                    st.error(f"❌ Error interno al generar audio: {str(e)}")
 
-    # Guardamos la respuesta en el historial
     st.session_state.messages.append({"role": "assistant", "content": res})
