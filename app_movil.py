@@ -5,19 +5,22 @@ from gtts import gTTS
 
 # --- 1. CONFIGURACIÓN ---
 API_KEY = "AIzaSyAgR4Uw2AFjiZoKb2DiXY2BmGV8HTrU2xc"
+# CAMBIO CLAVE: Usamos /v1/ en lugar de /v1beta/
+URL = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
 
 def hablar_con_gemini(mensaje):
-    # Probamos el modelo Pro, que es el más estable para claves nuevas
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
-    payload = {"contents": [{"parts": [{"text": mensaje}]}]}
+    payload = {
+        "contents": [{
+            "parts": [{"text": mensaje}]
+        }]
+    }
     headers = {'Content-Type': 'application/json'}
     
     try:
-        r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
+        r = requests.post(URL, headers=headers, data=json.dumps(payload), timeout=15)
         if r.status_code == 200:
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         else:
-            # Esto nos dirá el error REAL de Google
             datos_error = r.json()
             msg = datos_error.get('error', {}).get('message', 'Error desconocido')
             return f"🚫 Google dice: {msg}. (Código: {r.status_code})"
@@ -39,15 +42,14 @@ if "messages" not in st.session_state:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if p := st.chat_input("Escribe 'Estás ahí?'..."):
+if p := st.chat_input("¿Estás ahí?"):
     st.session_state.messages.append({"role": "user", "content": p})
     with st.chat_message("user"): st.markdown(p)
 
     with st.chat_message("assistant"):
-        res = hablar_con_gemini(f"Responde brevemente a {nombre}: {p}")
+        res = hablar_con_gemini(f"Responde a {nombre}: {p}")
         st.markdown(res)
         
-        # Botón de audio solo si no hay error
         if "🚫" not in res and "❌" not in res:
             if st.button("🔊 Enviar Audio"):
                 tts = gTTS(text=res[:250], lang='es')
