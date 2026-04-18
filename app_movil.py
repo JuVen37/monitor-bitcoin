@@ -1,9 +1,9 @@
 import streamlit as st
 import requests
 import json
-import os
+from gtts import gTTS
+import io
 import re
-import time
 
 # --- 1. CONFIGURACIÓN SEGURA ---
 if "GOOGLE_API_KEY" in st.secrets and "TELEGRAM_TOKEN" in st.secrets:
@@ -27,36 +27,6 @@ def hablar_con_gemini(mensaje):
     except Exception as e:
         return f"❌ Error de red: {str(e)}"
 
-def generar_audio_antibloqueo(texto):
-    # Limpiamos asteriscos y símbolos
-    texto_limpio = re.sub(r'[^\w\s.,;:!?¿¡]', '', texto)
-    if len(texto_limpio.strip()) == 0:
-        texto_limpio = "Error. Mensaje vacío."
-        
-    # Usamos una API pública para saltarnos el bloqueo de Google/Streamlit
-    url_api = "https://api.soundoftext.com/engine"
-    # Esta API gratuita permite hasta 200 caracteres por audio
-    payload = {"text": texto_limpio[:200], "voice": "es-ES"}
-    
-    try:
-        # 1. Pedimos que fabrique el MP3
-        req = requests.post(url_api, json=payload)
-        if req.status_code == 200:
-            audio_id = req.json().get("id")
-            time.sleep(1.5) # Damos 1.5 segundos para que lo procese
-            
-            # 2. Descargamos el MP3 REAL
-            url_descarga = f"https://api.soundoftext.com/sounds/{audio_id}"
-            mp3_data = requests.get(url_descarga)
-            
-            if mp3_data.status_code == 200:
-                with open("voice.mp3", "wb") as f:
-                    f.write(mp3_data.content)
-                return True
-    except:
-        pass
-    return False
-
 # --- 2. INTERFAZ ---
 st.set_page_config(page_title="CREAL OMNI", page_icon="🌌")
 st.title("🌌 CREAL OMNI-AI")
@@ -77,26 +47,37 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "assis
     
     if "🚫" not in ultimo_mensaje and "❌" not in ultimo_mensaje:
         if st.button("🔊 Enviar Audio a Telegram"):
-            with st.spinner("Conectando con el nuevo motor de voz..."):
-                exito = generar_audio_antibloqueo(ultimo_mensaje)
-                
-                if exito:
-                    # ENVIAMOS A TELEGRAM DIRECTAMENTE
+            with st.spinner("Creando audio en memoria RAM..."):
+                try:
+                    # 1. Limpieza de símbolos
+                    texto_limpio = re.sub(r'[^\w\s.,;:!?¿¡]', '', ultimo_mensaje)
+                    if len(texto_limpio.strip()) == 0:
+                        texto_limpio = "Error. Mensaje vacío."
+                    
+                    # 2. Generamos el audio en la RAM (¡Sin guardarlo en disco!)
+                    tts = gTTS(text=texto_limpio[:250], lang='es')
+                    archivo_en_ram = io.BytesIO()
+                    tts.write_to_fp(archivo_en_ram)
+                    
+                    # 3. Probamos en la web (Rebobinamos el archivo para leerlo)
+                    archivo_en_ram.seek(0)
+                    st.audio(archivo_en_ram, format="audio/mp3")
+                    
+                    # 4. Enviamos a Telegram
+                    archivo_en_ram.seek(0) # Volvemos a rebobinar
                     tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendAudio?chat_id={tele_id}"
-                    try:
-                        with open("voice.mp3", "rb") as f:
-                            r_tg = requests.post(tg_url, files={'audio': f})
-                        
-                        if r_tg.status_code == 200:
-                            st.success("✅ ¡Audio REAL generado y enviado!")
-                            # Ponemos el reproductor en la web también para que lo veas
-                            st.audio("voice.mp3", format="audio/mp3") 
-                        else:
-                            st.error(f"❌ Error de Telegram: {r_tg.text}")
-                    except Exception as e:
-                        st.error(f"❌ Error interno al enviar: {str(e)}")
-                else:
-                    st.error("❌ Falló el servidor de voz. Inténtalo de nuevo en unos segundos.")
+                    
+                    # Le decimos a Telegram que el archivo se llama "voice.mp3" aunque esté flotando en la memoria
+                    archivos = {'audio': ('voice.mp3', archivo_en_ram, 'audio/mp3')}
+                    r_tg = requests.post(tg_url, files=archivos, timeout=15)
+                    
+                    if r_tg.status_code == 200:
+                        st.success("✅ ¡Audio creado en RAM y enviado a Telegram!")
+                    else:
+                        st.error(f"❌ Error de Telegram: {r_tg.text}")
+
+                except Exception as e:
+                    st.error(f"❌ Error interno: {str(e)}")
 
 if p := st.chat_input("Escribe algo..."):
     st.session_state.messages.append({"role": "user", "content": p})
