@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 from gtts import gTTS
+import os
 import re
 
 # --- 1. CONFIGURACIÓN SEGURA ---
@@ -45,26 +46,33 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "assis
     ultimo_mensaje = st.session_state.messages[-1]["content"]
     
     if "🚫" not in ultimo_mensaje and "❌" not in ultimo_mensaje:
-        if st.button("🔊 Enviar Nota de Voz a Telegram"):
-            with st.spinner("Grabando nota de voz..."):
+        if st.button("🔊 Enviar Audio (MP3) a Telegram"):
+            with st.spinner("Preparando el audio..."):
                 try:
-                    # 1. Limpiamos el texto de asteriscos y símbolos raros
-                    texto_limpio = ultimo_mensaje.replace("*", "").replace("#", "").replace("_", "")
+                    # 1. Limpieza extrema: Quitamos emojis y símbolos raros que rompen la voz
+                    texto_limpio = re.sub(r'[^\w\s.,;:!?¿¡]', '', ultimo_mensaje)
                     
-                    # 2. Generamos el audio con el texto limpio
+                    if len(texto_limpio.strip()) == 0:
+                        texto_limpio = "No puedo leer este mensaje en voz alta."
+
+                    # 2. Generamos el audio MP3
                     tts = gTTS(text=texto_limpio[:250], lang='es')
                     tts.save("voice.mp3")
                     
-                    # 3. Enviamos como NOTA DE VOZ (sendVoice)
-                    tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendVoice?chat_id={tele_id}"
-                    with open("voice.mp3", "rb") as audio_file:
-                        # Atención: el archivo ahora se manda como 'voice', no 'audio'
-                        r_tg = requests.post(tg_url, files={'voice': audio_file})
-                    
-                    if r_tg.status_code == 200:
-                        st.success("✅ ¡Nota de voz enviada con éxito!")
+                    # 3. VERIFICACIÓN: ¿El archivo está vacío?
+                    peso_archivo = os.path.getsize("voice.mp3")
+                    if peso_archivo < 1000:  # Si pesa menos de 1KB, está vacío
+                        st.error("❌ El generador de voz ha fallado. El archivo está vacío.")
                     else:
-                        st.error(f"❌ Error de Telegram: {r_tg.text}")
+                        # 4. Enviamos como AUDIO normal (compatible con MP3)
+                        tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendAudio?chat_id={tele_id}"
+                        with open("voice.mp3", "rb") as audio_file:
+                            r_tg = requests.post(tg_url, files={'audio': audio_file})
+                        
+                        if r_tg.status_code == 200:
+                            st.success(f"✅ ¡Audio enviado con éxito! (Peso: {peso_archivo / 1000} KB)")
+                        else:
+                            st.error(f"❌ Error de Telegram: {r_tg.text}")
                 except Exception as e:
                     st.error(f"❌ Error interno de audio: {str(e)}")
 
