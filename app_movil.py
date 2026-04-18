@@ -1,23 +1,27 @@
 import streamlit as st
-import google.generativeai as genai
 import requests
+import json
 from gtts import gTTS
 
-# --- CONFIGURACIÓN ---
-GOOGLE_API_KEY = "AIzaSyAgR4Uw2AFjiZoKb2DiXY2BmGV8HTrU2xc"
+# --- 1. CONFIGURACIÓN ---
+API_KEY = "AIzaSyAgR4Uw2AFjiZoKb2DiXY2BmGV8HTrU2xc"
+# URL Directa de Google sin pasar por librerías intermedias
+URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
 
-# Configuración forzada
-genai.configure(api_key=GOOGLE_API_KEY)
+def hablar_con_gemini(mensaje):
+    payload = {
+        "contents": [{"parts": [{"text": mensaje}]}]
+    }
+    headers = {'Content-Type': 'application/json'}
+    
+    response = requests.post(URL, headers=headers, data=json.dumps(payload))
+    
+    if response.status_code == 200:
+        return response.json()['candidates'][0]['content']['parts'][0]['text']
+    else:
+        return f"⚠️ Error Directo: {response.status_code} - {response.text}"
 
-def obtener_modelo():
-    # Intentamos el nombre más moderno y estable
-    try:
-        return genai.GenerativeModel('gemini-1.5-flash')
-    except:
-        return genai.GenerativeModel('gemini-pro')
-
-model = obtener_modelo()
-
+# --- 2. INTERFAZ ---
 st.set_page_config(page_title="CREAL OMNI", page_icon="🌌")
 st.markdown("<style>.main { background: #000; color: #00ffc8; }</style>", unsafe_allow_html=True)
 
@@ -34,18 +38,13 @@ if "messages" not in st.session_state:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if p := st.chat_input("Escribe 'Hola' para probar..."):
+if p := st.chat_input("Escribe 'Hola' para probar la conexión directa..."):
     st.session_state.messages.append({"role": "user", "content": p})
     with st.chat_message("user"): st.markdown(p)
 
     with st.chat_message("assistant"):
-        try:
-            # Respuesta directa
-            response = model.generate_content(p)
-            res = response.text
-        except Exception as e:
-            res = f"⚠️ Sigue habiendo un bloqueo. Por favor, haz el paso de 'Delete App' en Streamlit. Error: {str(e)}"
-        
+        # Llamada directa a la API
+        res = hablar_con_gemini(f"Eres la IA de Creal. Responde a {nombre}: {p}")
         st.markdown(res)
         
         if st.button("🔊 Audio"):
