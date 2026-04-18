@@ -7,52 +7,56 @@ import re
 import base64
 import urllib.parse
 
-# --- 1. CONFIGURACIÓN Y ELIMINACIÓN DE MARCAS ---
+# --- 1. CONFIGURACIÓN Y ELIMINACIÓN TOTAL (NIVEL EXTREMO) ---
 st.set_page_config(page_title="OMNI-X", page_icon="♾️", layout="centered")
 
 st.markdown("""
     <style>
-    /* 1. OCULTAR TODO EL HEADER Y FOOTER (Adiós a 'Created by') */
-    header {visibility: hidden !important;}
+    /* 1. OCULTAR HEADER, FOOTER Y LÍNEA DE CARGA SUPERIOR */
+    header {visibility: hidden !important; height: 0px !important;}
     footer {visibility: hidden !important;}
     #MainMenu {visibility: hidden !important;}
     .stDeployButton {display:none !important;}
     
-    /* 2. ELIMINAR ESPACIO EN BLANCO SUPERIOR */
+    /* 2. QUITAR LA LÍNEA BLANCA DE PROGRESO/CARGA ARRIBA */
+    [data-testid="stStatusWidget"] {display:none !important;}
+    .stProgress > div > div > div > div { background-color: transparent !important; }
+
+    /* 3. FULMINAR ICONOS DE ABAJO (Corona y Comunidad) */
+    .stAppToolbar {display: none !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+    #stDecoration {display:none !important;}
+    
+    /* 4. AJUSTE DE PANTALLA COMPLETA */
     .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 5rem !important;
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
+        max-width: 100% !important;
     }
 
-    /* 3. ESTÉTICA GHOST DARK */
+    /* 5. ESTÉTICA DE FONDO */
     .stApp {
-        background: radial-gradient(circle at center, #101218 0%, #000000 100%);
+        background: #000000;
         color: #ffffff;
     }
     
-    /* 4. BURBUJAS DE CHAT */
+    /* 6. ESTILO DE MENSAJES */
     .stChatMessage {
         border-radius: 20px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(74, 144, 226, 0.15);
-        margin-bottom: 12px;
-    }
-    
-    /* 5. OCULTAR MARCA DE AGUA DEL INPUT */
-    footer:after {
-        content:''; 
-        display:none !important;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid #222;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Recuperar API Key (Invisible)
+# Recuperar API Key
 API_KEY = st.secrets.get("GOOGLE_API_KEY", "").strip()
 
 # --- 2. MOTOR OMNI-X ---
 def llamar_ia_omni(mensaje, img_b64=None, mime=None):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
-    instrucciones = "Eres OMNI-X, una inteligencia superior. No te presentes. Resuelve retos, analiza fotos y maximiza el valor para el usuario."
+    instrucciones = "Eres OMNI-X. IA de élite. Resuelve todo con brillantez."
 
     partes = [{"text": instrucciones}, {"text": mensaje}]
     if img_b64:
@@ -63,63 +67,52 @@ def llamar_ia_omni(mensaje, img_b64=None, mime=None):
         r = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(payload), timeout=35)
         return r.json()['candidates'][0]['content']['parts'][0]['text']
     except:
-        return "Sistemas activos. ¿Cuál es el comando?"
+        return "Conexión lista."
 
-# --- 3. INTERFAZ LIMPIA Y EXCLUSIVA ---
-st.markdown("<h1 style='text-align: center; background: linear-gradient(90deg, #4A90E2, #00ffcc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 40px;'>♾️ OMNI-X</h1>", unsafe_allow_html=True)
+# --- 3. INTERFAZ ---
+st.markdown("<h1 style='text-align: center; color: #4A90E2; font-size: 35px; margin-top: -20px;'>♾️ OMNI-X</h1>", unsafe_allow_html=True)
 
-# Subida de archivos integrada
-foto = st.file_uploader("", type=["jpg", "png", "jpeg", "pdf", "txt"])
+foto = st.file_uploader("", type=["jpg", "png", "jpeg"])
 if foto:
-    if foto.type.startswith("image"):
-        st.image(foto, width=280)
+    st.image(foto, width=250)
 
 st.divider()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Historial de Chat
 for m in st.session_state.messages:
     avatar = "♾️" if m["role"] == "assistant" else "👤"
     with st.chat_message(m["role"], avatar=avatar):
-        if "https://image" in m["content"]:
-            st.image(m["content"], use_container_width=True)
-        else:
-            st.markdown(m["content"])
+        if "https://image" in m["content"]: st.image(m["content"])
+        else: st.markdown(m["content"])
 
-# Entrada de usuario
-if prompt := st.chat_input("Inserta comando..."):
+if prompt := st.chat_input("Escribe aquí..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user", avatar="👤"):
-        st.markdown(prompt)
+    with st.chat_message("user", avatar="👤"): st.markdown(prompt)
 
     with st.chat_message("assistant", avatar="♾️"):
         img_data, m_type = None, None
-        if foto and foto.type.startswith("image"):
+        if foto:
             img_data = base64.b64encode(foto.getvalue()).decode("utf-8")
             m_type = foto.type
             
         res = llamar_ia_omni(prompt, img_data, m_type)
 
-        # Generador de Imagen Inteligente
-        if any(x in prompt.lower() for x in ["crea", "logo", "imagen", "diseña"]) and len(res.split()) > 4:
+        if any(x in res.lower() for x in ["crea", "logo", "imagen"]) and len(res.split()) > 4:
             url_img = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(res)}"
-            st.image(url_img, caption="Creación Finalizada", use_container_width=True)
+            st.image(url_img, caption="Generado")
             st.session_state.messages.append({"role": "assistant", "content": url_img})
         else:
             st.markdown(res)
             st.session_state.messages.append({"role": "assistant", "content": res})
             
-            # Herramientas de Acción
             col1, col2 = st.columns(2)
-            wa_text = urllib.parse.quote(f"Respuesta de OMNI-X:\n\n{res}")
-            col1.link_button("📱 WhatsApp", f"https://wa.me/?text={wa_text}")
-            col2.button("🔄 Nueva Sesión", on_click=lambda: st.session_state.clear())
+            col1.link_button("📱 WhatsApp", f"https://wa.me/?text={urllib.parse.quote(res)}")
+            col2.button("🔄 Borrar Chat", on_click=lambda: st.session_state.clear())
             
-            # Audio Neural
             try:
-                texto_v = re.sub(r'[^\w\s.,;:!?¿¡]', '', res)[:250]
+                texto_v = re.sub(r'[^\w\s.,;:!?¿¡]', '', res)[:200]
                 tts = gTTS(text=texto_v, lang='es')
                 b = io.BytesIO(); tts.write_to_fp(b); b64 = base64.b64encode(b.getvalue()).decode("utf-8")
                 st.markdown(f'<audio controls style="width:100%"><source src="data:audio/mp3;base64,{b64}"></audio>', unsafe_allow_html=True)
