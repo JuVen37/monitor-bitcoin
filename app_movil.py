@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 from gtts import gTTS
+import re
 
 # --- 1. CONFIGURACIÓN SEGURA ---
 if "GOOGLE_API_KEY" in st.secrets and "TELEGRAM_TOKEN" in st.secrets:
@@ -36,42 +37,39 @@ tele_id = st.sidebar.text_input("ID Telegram", "8449303559")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Dibujamos el historial de mensajes
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): 
         st.markdown(m["content"])
 
-# Si el ÚLTIMO mensaje es de la IA, mostramos el botón de forma fija
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
     ultimo_mensaje = st.session_state.messages[-1]["content"]
     
     if "🚫" not in ultimo_mensaje and "❌" not in ultimo_mensaje:
-        # El botón ahora está "suelto", no desaparecerá al pulsarlo
-        if st.button("🔊 Enviar Última Respuesta por Audio"):
-            with st.spinner("Creando y enviando audio..."):
+        if st.button("🔊 Enviar Nota de Voz a Telegram"):
+            with st.spinner("Grabando nota de voz..."):
                 try:
-                    tts = gTTS(text=ultimo_mensaje[:250], lang='es')
+                    # 1. Limpiamos el texto de asteriscos y símbolos raros
+                    texto_limpio = ultimo_mensaje.replace("*", "").replace("#", "").replace("_", "")
+                    
+                    # 2. Generamos el audio con el texto limpio
+                    tts = gTTS(text=texto_limpio[:250], lang='es')
                     tts.save("voice.mp3")
                     
-                    tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendAudio?chat_id={tele_id}"
+                    # 3. Enviamos como NOTA DE VOZ (sendVoice)
+                    tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendVoice?chat_id={tele_id}"
                     with open("voice.mp3", "rb") as audio_file:
-                        r_tg = requests.post(tg_url, files={'audio': audio_file})
+                        # Atención: el archivo ahora se manda como 'voice', no 'audio'
+                        r_tg = requests.post(tg_url, files={'voice': audio_file})
                     
                     if r_tg.status_code == 200:
-                        st.success("✅ ¡Audio enviado con éxito a tu Telegram!")
+                        st.success("✅ ¡Nota de voz enviada con éxito!")
                     else:
                         st.error(f"❌ Error de Telegram: {r_tg.text}")
                 except Exception as e:
                     st.error(f"❌ Error interno de audio: {str(e)}")
 
-# Caja de chat (Cuando escribes, recarga la página para que salga arriba)
 if p := st.chat_input("Escribe algo a Creal..."):
-    # Guardamos tu mensaje
     st.session_state.messages.append({"role": "user", "content": p})
-    
-    # Obtenemos y guardamos la respuesta
     res = hablar_con_gemini(f"Responde a {nombre}: {p}")
     st.session_state.messages.append({"role": "assistant", "content": res})
-    
-    # Recargamos la app para que aparezca el mensaje y el botón
     st.rerun()
