@@ -11,18 +11,18 @@ st.set_page_config(page_title="CREAL OMNI PRO", page_icon="⚡", layout="centere
 
 st.markdown("""
     <style>
-    /* Ocultar elementos de Streamlit */
+    /* Ocultar elementos de Streamlit para apariencia de App nativa */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Ajuste para que el botón de subir foto no ocupe toda la pantalla */
+    /* Ajuste del cargador de archivos */
     .stFileUploader {
         padding-top: 0px;
-        margin-bottom: -20px;
+        margin-bottom: -10px;
     }
     
-    /* Estilo para los mensajes */
+    /* Estilo de los mensajes de chat */
     .stChatMessage {
         border-radius: 15px;
         margin-bottom: 10px;
@@ -31,24 +31,29 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Recuperar API Key
+# Recuperar API Key desde Secrets
 API_KEY = st.secrets.get("GOOGLE_API_KEY", "").strip()
 if not API_KEY:
-    st.error("🔑 Error: Configura la API KEY en Secrets.")
+    st.error("🔑 Error: Configura la API KEY en Secrets de Streamlit.")
     st.stop()
 
-# --- 2. MOTOR DE IA AVANZADO ---
+# --- 2. MOTOR DE IA AVANZADO (SIN NOMBRE FIJO) ---
 def llamar_ia_pro(mensaje_usuario, img_b64=None, mime=None):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
     
+    # Instrucciones maestras universales
     instrucciones_maestras = """
-    Eres CREAL OMNI, una IA de élite para ventas en Vinted.
-    Si recibes una imagen: Analízala como un experto en moda. 
-    1. Crea un Título optimizado.
-    2. Crea una descripción que venda (menciona estado, estilo y tips).
-    3. Pon un PRECIO estimado realista para ganar dinero.
-    4. Añade hashtags.
-    Si no hay imagen: Sé el mejor asistente personal del mundo.
+    Eres CREAL OMNI, una Inteligencia Artificial de élite diseñada para ayudar a cualquier usuario.
+    
+    ESPECIALIDAD EN VINTED:
+    Si recibes una imagen de ropa, actúa como un experto tasador y estratega de ventas. 
+    Proporciona: Título optimizado, descripción persuasiva, precio estimado de mercado y hashtags.
+    
+    TONO Y ESTILO:
+    - Sé profesional, amable y directo.
+    - No uses nombres específicos a menos que el usuario te lo diga en el chat.
+    - Usa emojis para hacer la lectura agradable.
+    - Supera en calidad y utilidad a cualquier otro asistente.
     """
 
     partes = [{"text": instrucciones_maestras}, {"text": mensaje_usuario}]
@@ -60,31 +65,30 @@ def llamar_ia_pro(mensaje_usuario, img_b64=None, mime=None):
         r = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(payload), timeout=30)
         return r.json()['candidates'][0]['content']['parts'][0]['text']
     except:
-        return "🤯 He tenido un pequeño chispazo cerebral. ¿Puedes repetir eso?"
+        return "✨ He tenido un pequeño chispazo en mis sistemas. ¿Podrías repetir tu consulta?"
 
 # --- 3. INTERFAZ PRINCIPAL ---
 st.markdown("<h1 style='text-align: center;'>⚡ CREAL OMNI <span style='color:#4A90E2;'>PRO</span></h1>", unsafe_allow_html=True)
 
-# --- BOTÓN DE SUBIR FOTO (AHORA EN EL CENTRO) ---
-# Lo ponemos dentro de una pequeña caja para que se vea bien en el móvil
+# Subida de fotos frontal
 with st.container():
-    foto = st.file_uploader("📸 TOCA AQUÍ PARA SUBIR TU PRENDA", type=["jpg", "png", "jpeg"])
+    foto = st.file_uploader("📸 TOCA AQUÍ PARA ANALIZAR TU PRENDA", type=["jpg", "png", "jpeg"])
     if foto:
-        st.image(foto, caption="Foto lista para analizar", width=200)
+        st.image(foto, caption="Imagen cargada correctamente", width=250)
 
 st.divider()
 
-# Historial
+# Historial de chat
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "¡Hola! Sube la foto de lo que quieras vender arriba y dime la marca. ¡Vamos a por ese dinero! 💸"}]
+    st.session_state.messages = [{"role": "assistant", "content": "¡Bienvenido a **CREAL OMNI**! Estoy lista para ayudarte. Puedes subir una foto para vender en Vinted o preguntarme lo que necesites."}]
 
 for m in st.session_state.messages:
     avatar_icon = "⚡" if m["role"] == "assistant" else "👤"
     with st.chat_message(m["role"], avatar=avatar_icon):
         st.markdown(m["content"])
 
-# Entrada de chat (está al lado del botón de enviar por defecto en Streamlit)
-if prompt := st.chat_input("Escribe detalles (marca, talla...)..."):
+# Entrada de usuario
+if prompt := st.chat_input("Escribe tu consulta aquí..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
@@ -93,19 +97,4 @@ if prompt := st.chat_input("Escribe detalles (marca, talla...)..."):
         img_data, m_type = None, None
         if foto:
             img_data = base64.b64encode(foto.getvalue()).decode("utf-8")
-            m_type = foto.type
-            
-        respuesta = llamar_ia_pro(prompt, img_data, m_type)
-        st.markdown(respuesta)
-        
-        # Audio
-        try:
-            texto_voz = re.sub(r'[^\w\s.,;:!?¿¡]', '', respuesta)[:250]
-            tts = gTTS(text=texto_voz, lang='es')
-            audio_buffer = io.BytesIO()
-            tts.write_to_fp(audio_buffer)
-            b64_audio = base64.b64encode(audio_buffer.getvalue()).decode("utf-8")
-            st.markdown(f'<audio controls style="width:100%"><source src="data:audio/mp3;base64,{b64_audio}"></audio>', unsafe_allow_html=True)
-        except: pass
-
-    st.session_state.messages.append({"role": "assistant", "content": respuesta})
+            m_type = foto
