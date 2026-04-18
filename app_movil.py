@@ -3,7 +3,6 @@ import requests
 import json
 from gtts import gTTS
 import os
-import re
 
 # --- 1. CONFIGURACIÓN SEGURA ---
 if "GOOGLE_API_KEY" in st.secrets and "TELEGRAM_TOKEN" in st.secrets:
@@ -43,40 +42,32 @@ for m in st.session_state.messages:
         st.markdown(m["content"])
 
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
-    ultimo_mensaje = st.session_state.messages[-1]["content"]
-    
-    if "🚫" not in ultimo_mensaje and "❌" not in ultimo_mensaje:
-        if st.button("🔊 Enviar Archivo de Audio a Telegram"):
-            with st.spinner("Preparando el archivo..."):
-                try:
-                    # 1. Limpieza extrema
-                    texto_limpio = re.sub(r'[^\w\s.,;:!?¿¡]', '', ultimo_mensaje)
-                    
-                    if len(texto_limpio.strip()) == 0:
-                        texto_limpio = "Error en el texto, pero el audio funciona."
+    if st.button("🔊 Generar y Probar Audio en la Web"):
+        with st.spinner("Creando audio..."):
+            try:
+                # Vamos a forzar una frase corta y perfecta para probar
+                texto_prueba = "Hola Juan, esta es una prueba de sonido directa del sistema."
+                
+                tts = gTTS(text=texto_prueba, lang='es')
+                tts.save("voice.mp3")
+                
+                peso = os.path.getsize("voice.mp3")
+                st.info(f"💾 Peso del archivo creado: {peso} bytes")
+                
+                # REPRODUCTOR WEB INTEGRADO: Pruébalo aquí antes de Telegram
+                st.audio("voice.mp3", format="audio/mp3")
+                
+                # ENVIAR A TELEGRAM AUTOMÁTICAMENTE
+                tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendAudio?chat_id={tele_id}"
+                with open("voice.mp3", "rb") as f:
+                    requests.post(tg_url, files={'audio': f})
+                
+                st.success("✅ También se ha enviado a Telegram.")
 
-                    # 2. Generamos el audio MP3
-                    tts = gTTS(text=texto_limpio[:250], lang='es')
-                    tts.save("voice.mp3")
-                    
-                    # 3. VERIFICACIÓN
-                    peso_archivo = os.path.getsize("voice.mp3")
-                    if peso_archivo < 1000:
-                        st.error("❌ El generador de voz ha fallado. El archivo está vacío.")
-                    else:
-                        # 4. ENVIAMOS COMO DOCUMENTO (Esto fuerza a tu móvil a usar su propio reproductor)
-                        tg_url = f"https://api.telegram.org/bot{TG_TOKEN}/sendDocument?chat_id={tele_id}"
-                        with open("voice.mp3", "rb") as audio_file:
-                            r_tg = requests.post(tg_url, files={'document': audio_file})
-                        
-                        if r_tg.status_code == 200:
-                            st.success(f"✅ ¡Archivo de audio enviado! (Peso: {peso_archivo / 1000} KB)")
-                        else:
-                            st.error(f"❌ Error de Telegram: {r_tg.text}")
-                except Exception as e:
-                    st.error(f"❌ Error interno de audio: {str(e)}")
+            except Exception as e:
+                st.error(f"❌ Error al crear la voz: {str(e)}")
 
-if p := st.chat_input("Escribe algo a Creal..."):
+if p := st.chat_input("Escribe algo..."):
     st.session_state.messages.append({"role": "user", "content": p})
     res = hablar_con_gemini(f"Responde a {nombre}: {p}")
     st.session_state.messages.append({"role": "assistant", "content": res})
