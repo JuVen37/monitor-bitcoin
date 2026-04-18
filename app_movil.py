@@ -11,9 +11,14 @@ else:
     st.stop()
 
 def hablar_con_gemini(mensaje):
-    # Usamos la versión v1 que es la que no da error 404 hoy
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
-    payload = {"contents": [{"parts": [{"text": mensaje}]}]}
+    # Usamos v1beta y el nombre completo del modelo que Google exige ahora
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={API_KEY}"
+    
+    payload = {
+        "contents": [{
+            "parts": [{"text": mensaje}]
+        }]
+    }
     headers = {'Content-Type': 'application/json'}
     
     try:
@@ -21,7 +26,13 @@ def hablar_con_gemini(mensaje):
         if r.status_code == 200:
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         else:
-            return f"🚫 Google dice error {r.status_code}: {r.text}"
+            # Si el flash falla, intentamos el gemini-pro que es el más viejo y estable
+            url_backup = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={API_KEY}"
+            r_backup = requests.post(url_backup, headers=headers, data=json.dumps(payload))
+            if r_backup.status_code == 200:
+                return r_backup.json()['candidates'][0]['content']['parts'][0]['text']
+            else:
+                return f"🚫 Error persistente. Google dice: {r.status_code}"
     except:
         return "❌ Error de conexión."
 
@@ -38,7 +49,7 @@ if "messages" not in st.session_state:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if p := st.chat_input("Escribe 'Hola' para probar..."):
+if p := st.chat_input("Escribe 'Hola' para despertar a la IA..."):
     st.session_state.messages.append({"role": "user", "content": p})
     with st.chat_message("user"): st.markdown(p)
 
