@@ -4,12 +4,13 @@ import requests
 from gtts import gTTS
 import os
 
-# --- 1. NÚCLEO IA (TU CLAVE MAESTRA YA PUESTA) ---
+# --- 1. NÚCLEO IA (CON TU CLAVE MAESTRA) ---
 GOOGLE_API_KEY = "AIzaSyAgR4Uw2AFjiZoKb2DiXY2BmGV8HTrU2xc"
 
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Cambiamos a 'gemini-pro' para evitar el error 404
+    model = genai.GenerativeModel('gemini-pro')
 except:
     st.error("Error al conectar con Google AI.")
 
@@ -22,7 +23,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LOGIN LATERAL ---
+# --- 3. BARRA LATERAL ---
 with st.sidebar:
     st.title("🛡️ Nodo Central")
     user_name = st.text_input("¿Quién eres?", "Creal")
@@ -46,7 +47,7 @@ if p := st.chat_input("Hablemos de lo que quieras..."):
 
     with st.chat_message("assistant"):
         try:
-            # Respuesta inteligente real
+            # Respuesta inteligente con el modelo compatible
             ctx = f"Eres la IA de Creal. Usuario: {user_name}. Sé brillante, experto y empático."
             response = model.generate_content(f"{ctx}\nPregunta: {p}")
             res = response.text
