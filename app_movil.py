@@ -16,16 +16,17 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Estilo de los mensajes */
+    /* Ajuste para que el botón de subir foto no ocupe toda la pantalla */
+    .stFileUploader {
+        padding-top: 0px;
+        margin-bottom: -20px;
+    }
+    
+    /* Estilo para los mensajes */
     .stChatMessage {
         border-radius: 15px;
         margin-bottom: 10px;
         border: 1px solid #30363d;
-    }
-    
-    /* Personalización del fondo y fuentes */
-    stApp {
-        background-color: #0d1117;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -40,21 +41,17 @@ if not API_KEY:
 def llamar_ia_pro(mensaje_usuario, img_b64=None, mime=None):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
     
-    # INSTRUCCIONES MAESTRAS (Aquí es donde superamos a ChatGPT)
     instrucciones_maestras = """
-    Eres CREAL OMNI, una IA de élite superior en precisión y utilidad. 
-    Tu objetivo es ser más directo, creativo y útil que cualquier otra IA.
-    
-    REGLAS DE ORO:
-    1. Si te pasan una foto de ropa para Vinted: Sé un tiburón de las ventas. Da el mejor título, 
-       descripción emocional y tasa el precio basándote en tendencias actuales de mercado.
-    2. Si es una consulta general: Sé brillante, breve y evita las frases típicas de robot.
-    3. Usa siempre emojis que encajen con el tono.
-    4. Si detectas fallos en la foto (arrugas, mala luz), dáselo como consejo al usuario para mejorar su venta.
+    Eres CREAL OMNI, una IA de élite para ventas en Vinted.
+    Si recibes una imagen: Analízala como un experto en moda. 
+    1. Crea un Título optimizado.
+    2. Crea una descripción que venda (menciona estado, estilo y tips).
+    3. Pon un PRECIO estimado realista para ganar dinero.
+    4. Añade hashtags.
+    Si no hay imagen: Sé el mejor asistente personal del mundo.
     """
 
     partes = [{"text": instrucciones_maestras}, {"text": mensaje_usuario}]
-    
     if img_b64:
         partes.append({"inline_data": {"mime_type": mime, "data": img_b64}})
         
@@ -65,27 +62,29 @@ def llamar_ia_pro(mensaje_usuario, img_b64=None, mime=None):
     except:
         return "🤯 He tenido un pequeño chispazo cerebral. ¿Puedes repetir eso?"
 
-# --- 3. INTERFAZ ---
+# --- 3. INTERFAZ PRINCIPAL ---
 st.markdown("<h1 style='text-align: center;'>⚡ CREAL OMNI <span style='color:#4A90E2;'>PRO</span></h1>", unsafe_allow_html=True)
 
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/4712/4712109.png", width=100)
-    st.title("Panel de Control")
-    user_name = st.text_input("Piloto:", "Juan")
-    st.divider()
-    foto = st.file_uploader("📸 Analizador de Visión (Vinted/Objetos)", type=["jpg", "png", "jpeg"])
-    if foto: st.image(foto, use_container_width=True)
+# --- BOTÓN DE SUBIR FOTO (AHORA EN EL CENTRO) ---
+# Lo ponemos dentro de una pequeña caja para que se vea bien en el móvil
+with st.container():
+    foto = st.file_uploader("📸 TOCA AQUÍ PARA SUBIR TU PRENDA", type=["jpg", "png", "jpeg"])
+    if foto:
+        st.image(foto, caption="Foto lista para analizar", width=200)
+
+st.divider()
 
 # Historial
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": f"Sistemas listos. ¿Qué misión tenemos hoy, **{user_name}**?"}]
+    st.session_state.messages = [{"role": "assistant", "content": "¡Hola! Sube la foto de lo que quieras vender arriba y dime la marca. ¡Vamos a por ese dinero! 💸"}]
 
 for m in st.session_state.messages:
-    with st.chat_message(m["role"], avatar="⚡" if m["role"] == "assistant" else "👤"):
+    avatar_icon = "⚡" if m["role"] == "assistant" else "👤"
+    with st.chat_message(m["role"], avatar=avatar_icon):
         st.markdown(m["content"])
 
-# Entrada de usuario
-if prompt := st.chat_input("Escribe tu comando..."):
+# Entrada de chat (está al lado del botón de enviar por defecto en Streamlit)
+if prompt := st.chat_input("Escribe detalles (marca, talla...)..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
@@ -99,7 +98,7 @@ if prompt := st.chat_input("Escribe tu comando..."):
         respuesta = llamar_ia_pro(prompt, img_data, m_type)
         st.markdown(respuesta)
         
-        # Audio Pro
+        # Audio
         try:
             texto_voz = re.sub(r'[^\w\s.,;:!?¿¡]', '', respuesta)[:250]
             tts = gTTS(text=texto_voz, lang='es')
