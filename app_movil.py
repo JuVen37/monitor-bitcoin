@@ -6,39 +6,41 @@ import io
 import re
 import base64
 
-# --- 1. DISEÑO DE ÉLITE (CHATGPT UI CLONE) ---
+# --- 1. DISEÑO DE INTERFAZ MINIMALISTA (ESTILO APPLE/OPENAI) ---
 st.set_page_config(page_title="CREAL OMNI", page_icon="⚡", layout="centered")
 
 st.markdown("""
     <style>
-    /* Ocultar basura de Streamlit */
+    /* Ocultar elementos innecesarios */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Fondo ultra oscuro profesional */
+    /* Fondo y tipografía */
     .stApp {background-color: #0b0d11;}
     
-    /* Estilo de los mensajes */
+    /* Estilo del botón "+" de subida */
+    .stFileUploader section {
+        background-color: #1e1f22 !important;
+        border: 1px dashed #4A90E2 !important;
+        border-radius: 15px !important;
+        color: white !important;
+        padding: 10px !important;
+    }
+    
+    /* Burbujas de chat */
     .stChatMessage {
         border-radius: 20px;
-        border: none;
         background-color: #1e1f22;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         padding: 15px;
     }
     
-    /* Contenedor del chat para que no choque con el input */
-    .main .block-container {
-        padding-bottom: 150px;
-    }
-
-    /* Estilo del botón de carga para que parezca el '+' de ChatGPT */
-    .stFileUploader section {
-        background-color: #2b2d31 !important;
-        border: 1px solid #4A90E2 !important;
-        border-radius: 10px !important;
-        padding: 5px !important;
+    /* Ajuste para móviles */
+    @media (max-width: 640px) {
+        .block-container {
+            padding: 1rem 1rem !important;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -46,15 +48,15 @@ st.markdown("""
 # Recuperar API Key
 API_KEY = st.secrets.get("GOOGLE_API_KEY", "").strip()
 
-# --- 2. MOTOR DE IA BUSINESS ---
+# --- 2. EL CEREBRO DE LA IA ---
 def llamar_ia_master(mensaje_usuario, img_b64=None, mime=None):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
     
     instrucciones = """
-    Eres CREAL OMNI BUSINESS, la IA más avanzada del mercado. Tu objetivo es generar riqueza y soluciones de élite.
-    - Si hay imagen: Eres experto en Vinted/E-commerce. Crea títulos magnéticos, descripciones AIDA, precios de beneficio máximo y hashtags.
-    - Si es texto: Sé brillante, ejecutivo y extremadamente útil.
-    - No te presentes. No digas 'Sistemas listos'. Solo responde con poder.
+    Eres CREAL OMNI BUSINESS. Tu única misión es ser la IA más útil del planeta.
+    - Si recibes imagen: Eres el mejor experto en Vinted y ventas online. Analiza, tasa y redacta anuncios de éxito.
+    - Si recibes texto: Sé ejecutivo, resolutivo y brillante.
+    - Responde siempre con audacia. Sin introducciones innecesarias.
     """
 
     partes = [{"text": instrucciones}, {"text": mensaje_usuario}]
@@ -66,39 +68,34 @@ def llamar_ia_master(mensaje_usuario, img_b64=None, mime=None):
         r = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(payload), timeout=30)
         return r.json()['candidates'][0]['content']['parts'][0]['text']
     except:
-        return "Conexión establecida. Dime tu objetivo."
+        return "Conexión activa. ¿Cuál es el objetivo?"
 
-# --- 3. INTERFAZ ---
-st.markdown("<h1 style='text-align: center; color: white; font-size: 24px;'>⚡ CREAL OMNI</h1>", unsafe_allow_html=True)
+# --- 3. ESTRUCTURA DE LA APP ---
+st.markdown("<h3 style='text-align: center; color: white; opacity: 0.8;'>⚡ CREAL OMNI</h3>", unsafe_allow_html=True)
+
+# EL BOTÓN "+" VISIBLE ARRIBA (Para que nadie se pierda)
+foto = st.file_uploader("➕ AÑADIR ARCHIVO O FOTO", type=["jpg", "png", "jpeg", "pdf"])
+if foto:
+    st.image(foto, width=150, caption="Documento/Imagen listo")
+
+st.divider()
 
 # Historial
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Dibujar mensajes
+# Dibujar chat
 for m in st.session_state.messages:
     avatar = "⚡" if m["role"] == "assistant" else "👤"
     with st.chat_message(m["role"], avatar=avatar):
         st.markdown(m["content"])
 
-# --- 4. ZONA DE ENTRADA (ESTILO CHATGPT) ---
-# Ponemos el cargador de archivos justo antes del chat input de forma discreta
-with st.sidebar:
-    st.markdown("### 🛠️ Herramientas")
-    foto = st.file_uploader("➕ Añadir imagen (Vinted/Visión)", type=["jpg", "png", "jpeg"])
-    if foto:
-        st.image(foto, caption="Imagen cargada", use_container_width=True)
-    st.divider()
-    st.caption("Versión Business 2.5")
-
 # Barra de chat
-if prompt := st.chat_input("Escribe un mensaje..."):
-    # Añadir mensaje de usuario
+if prompt := st.chat_input("Escribe un comando..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
 
-    # Respuesta IA
     with st.chat_message("assistant", avatar="⚡"):
         img_data, m_type = None, None
         if foto:
@@ -108,7 +105,7 @@ if prompt := st.chat_input("Escribe un mensaje..."):
         respuesta = llamar_ia_master(prompt, img_data, m_type)
         st.markdown(respuesta)
         
-        # Audio
+        # Audio Pro
         try:
             texto_voz = re.sub(r'[^\w\s.,;:!?¿¡]', '', respuesta)[:250]
             tts = gTTS(text=texto_voz, lang='es')
