@@ -6,132 +6,107 @@ import io
 import re
 import base64
 
-# --- 1. CONFIGURACIÓN Y DISEÑO CSS ---
-st.set_page_config(page_title="CREAL OMNI", page_icon="🌌", layout="centered")
+# --- 1. DISEÑO DE ÉLITE (CSS) ---
+st.set_page_config(page_title="CREAL OMNI PRO", page_icon="⚡", layout="centered")
 
 st.markdown("""
     <style>
+    /* Ocultar elementos de Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    .stChatInputContainer {padding-bottom: 20px;}
+    
+    /* Estilo de los mensajes */
+    .stChatMessage {
+        border-radius: 15px;
+        margin-bottom: 10px;
+        border: 1px solid #30363d;
+    }
+    
+    /* Personalización del fondo y fuentes */
+    stApp {
+        background-color: #0d1117;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-if "GOOGLE_API_KEY" in st.secrets:
-    API_KEY = st.secrets["GOOGLE_API_KEY"].strip()
-else:
-    st.error("⚠️ Faltan las claves en la sección de Misterios de Streamlit.")
+# Recuperar API Key
+API_KEY = st.secrets.get("GOOGLE_API_KEY", "").strip()
+if not API_KEY:
+    st.error("🔑 Error: Configura la API KEY en Secrets.")
     st.stop()
 
-# --- NUEVO MOTOR CON VISIÓN ARTIFICIAL ---
-def hablar_con_gemini(mensaje, imagen_base64=None, mime_type=None):
+# --- 2. MOTOR DE IA AVANZADO ---
+def llamar_ia_pro(mensaje_usuario, img_b64=None, mime=None):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
     
-    partes = [{"text": mensaje}]
+    # INSTRUCCIONES MAESTRAS (Aquí es donde superamos a ChatGPT)
+    instrucciones_maestras = """
+    Eres CREAL OMNI, una IA de élite superior en precisión y utilidad. 
+    Tu objetivo es ser más directo, creativo y útil que cualquier otra IA.
     
-    if imagen_base64:
-        partes.append({
-            "inline_data": {
-                "mime_type": mime_type,
-                "data": imagen_base64
-            }
-        })
+    REGLAS DE ORO:
+    1. Si te pasan una foto de ropa para Vinted: Sé un tiburón de las ventas. Da el mejor título, 
+       descripción emocional y tasa el precio basándote en tendencias actuales de mercado.
+    2. Si es una consulta general: Sé brillante, breve y evita las frases típicas de robot.
+    3. Usa siempre emojis que encajen con el tono.
+    4. Si detectas fallos en la foto (arrugas, mala luz), dáselo como consejo al usuario para mejorar su venta.
+    """
+
+    partes = [{"text": instrucciones_maestras}, {"text": mensaje_usuario}]
+    
+    if img_b64:
+        partes.append({"inline_data": {"mime_type": mime, "data": img_b64}})
         
     payload = {"contents": [{"parts": partes}]}
-    headers = {'Content-Type': 'application/json'}
-    
     try:
-        r = requests.post(url, headers=headers, data=json.dumps(payload), timeout=25)
-        if r.status_code == 200:
-            return r.json()['candidates'][0]['content']['parts'][0]['text']
-        else:
-            return f"🚫 Error {r.status_code}: {r.text}"
-    except Exception as e:
-        return f"❌ Error de red: {str(e)}"
+        r = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(payload), timeout=30)
+        return r.json()['candidates'][0]['content']['parts'][0]['text']
+    except:
+        return "🤯 He tenido un pequeño chispazo cerebral. ¿Puedes repetir eso?"
 
-# --- 2. INTERFAZ GRÁFICA PRINCIPAL ---
-st.markdown("<h1 style='text-align: center; color: #4A90E2;'>🌌 CREAL OMNI</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #888;'>Asistente IA - Edición Vinted Pro 👗👕</p>", unsafe_allow_html=True)
-st.divider()
+# --- 3. INTERFAZ ---
+st.markdown("<h1 style='text-align: center;'>⚡ CREAL OMNI <span style='color:#4A90E2;'>PRO</span></h1>", unsafe_allow_html=True)
 
 with st.sidebar:
-    st.title("📸 Analizador Vinted")
-    nombre = st.text_input("¿Cómo te llamas?", "Usuario")
-    st.markdown("---")
-    
-    foto_subida = st.file_uploader("Sube la foto de la prenda:", type=["jpg", "jpeg", "png"])
-    
-    if foto_subida:
-        st.success("✅ Foto cargada")
-        st.image(foto_subida, caption="Prenda a analizar", use_container_width=True)
-        
-    st.markdown("---")
-    st.caption("Desarrollado por Juan 🚀")
+    st.image("https://cdn-icons-png.flaticon.com/512/4712/4712109.png", width=100)
+    st.title("Panel de Control")
+    user_name = st.text_input("Piloto:", "Juan")
+    st.divider()
+    foto = st.file_uploader("📸 Analizador de Visión (Vinted/Objetos)", type=["jpg", "png", "jpeg"])
+    if foto: st.image(foto, use_container_width=True)
 
+# Historial
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "¡Hola! Sube una foto de tu prenda en el menú de la izquierda, dime la marca o detalles, y te crearé el anuncio perfecto **incluyendo una estimación de precio**. 💸"}
-    ]
+    st.session_state.messages = [{"role": "assistant", "content": f"Sistemas listos. ¿Qué misión tenemos hoy, **{user_name}**?"}]
 
 for m in st.session_state.messages:
-    avatar_icon = "🌌" if m["role"] == "assistant" else "🧑‍💻"
-    with st.chat_message(m["role"], avatar=avatar_icon): 
+    with st.chat_message(m["role"], avatar="⚡" if m["role"] == "assistant" else "👤"):
         st.markdown(m["content"])
 
-if p := st.chat_input("Ej: 'Es una chaqueta Zara talla M casi nueva'"):
-    st.session_state.messages.append({"role": "user", "content": p})
-    with st.chat_message("user", avatar="🧑‍💻"): 
-        st.markdown(p)
+# Entrada de usuario
+if prompt := st.chat_input("Escribe tu comando..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(prompt)
 
-    with st.chat_message("assistant", avatar="🌌"):
-        with st.spinner("Analizando mercado y creando anuncio..."):
+    with st.chat_message("assistant", avatar="⚡"):
+        img_data, m_type = None, None
+        if foto:
+            img_data = base64.b64encode(foto.getvalue()).decode("utf-8")
+            m_type = foto.type
             
-            # --- EL NUEVO CEREBRO TASADOR DE VINTED ---
-            prompt_vinted = f"""
-            Eres un experto tasador de moda y vendedor top en Vinted. El usuario {nombre} quiere vender una prenda.
-            Actúa como su asistente personal de marketing. 
-            Su mensaje extra es: "{p}".
-            Si hay una imagen adjunta, mírala detalladamente para deducir el tipo de tejido, el estilo y la calidad aparente.
-            Genera una respuesta súper estructurada que incluya obligatoriamente estas 4 partes:
-            
-            1. 📝 **TÍTULO:** Un título llamativo y optimizado con palabras clave para que salga el primero en el buscador.
-            2. ✍️ **DESCRIPCIÓN:** Una descripción persuasiva (estado, cómo queda puesto, medidas estimadas, con qué combinarlo).
-            3. 💰 **PRECIO RECOMENDADO:** Analiza la marca, el tipo de prenda y el mercado actual. Dale un rango de precio de venta realista (ejemplo: entre 12€ y 18€) y explícale brevemente tu razonamiento.
-            4. 🏷️ **HASHTAGS:** Lista de 5-10 hashtags útiles.
-            
-            Usa emojis y un tono amigable, animando a la venta.
-            """
-            
-            imagen_b64 = None
-            mime = None
-            
-            if foto_subida is not None:
-                bytes_data = foto_subida.getvalue()
-                imagen_b64 = base64.b64encode(bytes_data).decode("utf-8")
-                mime = foto_subida.type
+        respuesta = llamar_ia_pro(prompt, img_data, m_type)
+        st.markdown(respuesta)
+        
+        # Audio Pro
+        try:
+            texto_voz = re.sub(r'[^\w\s.,;:!?¿¡]', '', respuesta)[:250]
+            tts = gTTS(text=texto_voz, lang='es')
+            audio_buffer = io.BytesIO()
+            tts.write_to_fp(audio_buffer)
+            b64_audio = base64.b64encode(audio_buffer.getvalue()).decode("utf-8")
+            st.markdown(f'<audio controls style="width:100%"><source src="data:audio/mp3;base64,{b64_audio}"></audio>', unsafe_allow_html=True)
+        except: pass
 
-            res = hablar_con_gemini(prompt_vinted, imagen_b64, mime)
-            st.markdown(res)
-            
-            if "🚫" not in res and "❌" not in res:
-                try:
-                    texto_limpio = re.sub(r'[^\w\s.,;:!?¿¡]', '', res)
-                    if len(texto_limpio.strip()) > 0:
-                        tts = gTTS(text=texto_limpio[:250], lang='es')
-                        archivo_en_ram = io.BytesIO()
-                        tts.write_to_fp(archivo_en_ram)
-                        archivo_en_ram.seek(0)
-                        base64_audio = base64.b64encode(archivo_en_ram.read()).decode("utf-8")
-                        audio_html = f'''
-                            <div style="margin-top: 10px; padding: 10px; border-radius: 10px; background-color: rgba(128, 128, 128, 0.1);">
-                                <audio controls style="width: 100%; height: 40px;">
-                                    <source src="data:audio/mp3;base64,{base64_audio}" type="audio/mp3">
-                                </audio>
-                            </div>
-                        '''
-                        st.markdown(audio_html, unsafe_allow_html=True)
-                except Exception as e:
-                    pass
-
-    st.session_state.messages.append({"role": "assistant", "content": res})
+    st.session_state.messages.append({"role": "assistant", "content": respuesta})
