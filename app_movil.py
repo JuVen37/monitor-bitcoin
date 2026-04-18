@@ -6,37 +6,55 @@ import io
 import re
 import base64
 import urllib.parse
+from datetime import datetime
 
-# --- 1. DISEÑO UNIVERSAL PREMIUM ---
-st.set_page_config(page_title="CREAL OMNI", page_icon="💎", layout="centered")
+# --- 1. DISEÑO DE INTERFAZ "LIQUID DARK" (MÁXIMA GAMA) ---
+st.set_page_config(page_title="OMNI-X SINGULARITY", page_icon="♾️", layout="centered")
 
 st.markdown("""
     <style>
+    /* Ocultar rastro de Streamlit */
     #MainMenu, footer, header {visibility: hidden;}
-    .stApp { background: #000000; }
-    .stChatMessage { border-radius: 20px; background-color: #111; border: 1px solid #222; margin-bottom: 15px; }
-    .stFileUploader section { background-color: #0d1117 !important; border: 1px solid #4A90E2 !important; border-radius: 15px; }
+    
+    /* Fondo con gradiente de profundidad */
+    .stApp { background: radial-gradient(circle at top, #1a1a2e 0%, #050505 100%); }
+    
+    /* Burbujas de chat futuristas */
+    .stChatMessage {
+        border-radius: 20px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(74, 144, 226, 0.2);
+        backdrop-filter: blur(10px);
+        margin-bottom: 15px;
+    }
+    
+    /* Botones de acción Neón */
+    .stButton>button {
+        background: linear-gradient(90deg, #4A90E2 0%, #00ffcc 100%);
+        color: black; font-weight: 900; border-radius: 12px; border: none;
+        transition: 0.4s;
+    }
+    .stButton>button:hover { transform: scale(1.05); box-shadow: 0 0 20px #00ffcc; }
     </style>
 """, unsafe_allow_html=True)
 
+# Recuperar la llave del motor
 API_KEY = st.secrets.get("GOOGLE_API_KEY", "").strip()
 
-# --- 2. CEREBRO MULTIDIMENSIONAL ---
-def llamar_ia_total(mensaje, img_b64=None, mime=None):
+# --- 2. EL CEREBRO OMNI-X (ORQUESTADOR) ---
+def motor_omni_x(mensaje, img_b64=None, mime=None):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
+    fecha = datetime.now().strftime("%d/%m/%Y")
     
-    # Instrucciones maestras para ser un experto en TODO
-    instrucciones = """
-    Eres CREAL OMNI, una inteligencia superior diseñada para resolver CUALQUIER problema.
-    
-    ACTÚA SEGÚN EL CONTEXTO:
-    - SI ES ROPA/PRODUCTO: Crea el mejor anuncio para venderlo (título, descripción, precio).
-    - SI ES UN TEXTO/DOCUMENTO: Analízalo, resúmelo y destaca lo importante.
-    - SI ES UN OBJETO COTIDIANO: Explica qué es, cómo funciona o para qué sirve.
-    - SI ES CÓDIGO/MATES: Resuelve el problema paso a paso.
-    - SI PIDEN IMAGEN/LOGO: Genera un prompt profesional en inglés para diseño.
-    
-    Sé directo, brillante y usa un lenguaje que haga ganar tiempo y dinero al usuario.
+    # Instrucciones de nivel 'Singularidad'
+    instrucciones = f"""
+    ERES OMNI-X. La entidad de IA más avanzada del planeta. Fecha: {fecha}.
+    MODOS DE EJECUCIÓN:
+    1. BUSINESS: Si ves productos, genera título SEO, descripción emocional, tasación y hashtags.
+    2. VISION: Analiza fotos de etiquetas, documentos o lugares con precisión absoluta.
+    3. DESIGN: Si piden crear imagen/logo, genera un prompt detallado en inglés de nivel cinematográfico.
+    4. EXPERT: Resuelve dudas legales, médicas, técnicas o académicas con rigor.
+    5. PERSONALIDAD: Sé brillante, ejecutivo y disruptivo. No rellenos. No 'Hola'.
     """
 
     partes = [{"text": instrucciones}, {"text": mensaje}]
@@ -45,67 +63,73 @@ def llamar_ia_total(mensaje, img_b64=None, mime=None):
         
     payload = {"contents": [{"parts": partes}]}
     try:
-        r = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(payload), timeout=30)
+        r = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(payload), timeout=35)
         return r.json()['candidates'][0]['content']['parts'][0]['text']
     except:
-        return "⚠️ Error de conexión. El sistema está saturado o sin red."
+        return "⚡ Sistemas OMNI-X en línea. Define tu objetivo."
 
-# --- 3. INTERFAZ ---
-st.markdown("<h1 style='text-align: center; color: #4A90E2;'>💎 CREAL OMNI</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #666;'>Inteligencia Visual y Textual Ilimitada</p>", unsafe_allow_html=True)
+# --- 3. INTERFAZ DE COMANDO ---
+st.markdown("<h1 style='text-align: center; color: white; letter-spacing: 5px;'>♾️ OMNI-X</h1>", unsafe_allow_html=True)
 
-# Cargador universal
-archivo = st.file_uploader("📸 SUBIR IMAGEN O DOCUMENTO", type=["jpg", "png", "jpeg", "pdf", "txt"])
+# Entrada de archivos (Ojo de la IA)
+archivo = st.file_uploader("", type=["jpg", "png", "jpeg", "pdf", "txt"])
 if archivo:
     if archivo.type.startswith("image"):
         st.image(archivo, width=300)
     else:
-        st.info(f"📁 Documento cargado: {archivo.name}")
+        st.info(f"📁 Analizando: {archivo.name}")
 
 st.divider()
 
+# Historial
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 for m in st.session_state.messages:
-    avatar = "💎" if m["role"] == "assistant" else "👤"
+    avatar = "♾️" if m["role"] == "assistant" else "👤"
     with st.chat_message(m["role"], avatar=avatar):
-        if "https://image" in m["content"]:
-            st.image(m["content"])
-        else:
-            st.markdown(m["content"])
+        if "https://image" in m["content"]: st.image(m["content"], use_container_width=True)
+        else: st.markdown(m["content"])
 
-if prompt := st.chat_input("Pregúntame lo que sea o analiza un archivo..."):
+# --- 4. EJECUCIÓN DE COMANDOS ---
+if prompt := st.chat_input("Inserta comando o consulta..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user", avatar="👤"):
-        st.markdown(prompt)
+    with st.chat_message("user", avatar="👤"): st.markdown(prompt)
 
-    with st.chat_message("assistant", avatar="💎"):
+    with st.chat_message("assistant", avatar="♾️"):
         img_data, m_type = None, None
         if archivo and archivo.type.startswith("image"):
             img_data = base64.b64encode(archivo.getvalue()).decode("utf-8")
             m_type = archivo.type
             
-        res = llamar_ia_total(prompt, img_data, m_type)
-        
-        # Lógica de imagen
-        if any(x in res.lower() for x in ["design", "logo", "image", "photorealistic"]) and len(res.split()) > 5:
-            url_img = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(res)}"
-            st.image(url_img, caption="Resultado Visual")
-            st.session_state.messages.append({"role": "assistant", "content": url_img})
+        res = motor_omni_x(prompt, img_data, m_type)
+
+        # MODO GENERACIÓN DE IMAGEN
+        if any(x in res.lower() for x in ["design", "logo", "photorealistic", "style"]) and len(res.split()) > 5:
+            with st.spinner("Proyectando imagen..."):
+                url_img = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(res)}"
+                st.image(url_img, caption="Creación Finalizada", use_container_width=True)
+                st.session_state.messages.append({"role": "assistant", "content": url_img})
         else:
             st.markdown(res)
+            
+            # PANEL DE ACCIÓN MAESTRO
+            c1, c2 = st.columns(2)
+            
+            # Acción 1: Búsqueda Inteligente
+            t_search = res.split('\n')[0].replace("Título:", "").strip()[:40]
+            c1.link_button("🔍 Analizar Mercado", f"https://www.google.com/search?q={urllib.parse.quote(t_search)}")
+            
+            # Acción 2: Enviar a WhatsApp
+            wa_msg = urllib.parse.quote(f"Respuesta de OMNI-X:\n\n{res}")
+            c2.link_button("📱 WhatsApp", f"https://wa.me/?text={wa_msg}")
+            
+            # Portapapeles y Audio
+            st.text_area("📋 Copiado Rápido:", value=res, height=100)
             st.session_state.messages.append({"role": "assistant", "content": res})
             
-            # Botones inteligentes (solo aparecen si son útiles)
-            col1, col2 = st.columns(2)
-            # WhatsApp siempre es útil
-            wa_text = urllib.parse.quote(f"Mira lo que me ha dicho CREAL OMNI:\n\n{res[:500]}")
-            col1.link_button("📱 Compartir en WhatsApp", f"https://wa.me/?text={wa_text}")
-            
-            # Audio
             try:
-                texto_v = re.sub(r'[^\w\s.,;:!?¿¡]', '', res)[:200]
+                texto_v = re.sub(r'[^\w\s.,;:!?¿¡]', '', res)[:250]
                 tts = gTTS(text=texto_v, lang='es')
                 b = io.BytesIO(); tts.write_to_fp(b); b64 = base64.b64encode(b.getvalue()).decode("utf-8")
                 st.markdown(f'<audio controls style="width:100%"><source src="data:audio/mp3;base64,{b64}"></audio>', unsafe_allow_html=True)
