@@ -7,52 +7,48 @@ import re
 import base64
 import urllib.parse
 
-# --- 1. PROTOCOLO DE OCULTACIÓN TOTAL (MOVIL OPTIMIZED) ---
+# --- 1. PROTOCOLO "BLACK HOLE" (ELIMINACIÓN TOTAL DEFINITIVA) ---
 st.set_page_config(page_title="OMNI-X", page_icon="♾️", layout="centered")
 
+# Inyectamos el CSS con la máxima prioridad posible (!important en todo)
 st.markdown("""
     <style>
-    /* 1. OCULTAR BARRA SUPERIOR Y LÍNEA DE CARGA */
-    header, [data-testid="stHeader"], [data-testid="stDecoration"] {
+    /* OCULTAR TODO EL HEADER, FOOTER Y DECORACIONES */
+    header, footer, .stDeployButton, #MainMenu, [data-testid="stHeader"], [data-testid="stDecoration"] {
         display: none !important;
         visibility: hidden !important;
-    }
-    
-    /* 2. OCULTAR ICONOS DE ABAJO (CORONA, COMUNIDAD, ETC.) */
-    [data-testid="stToolbar"], .stAppToolbar, [data-testid="stStatusWidget"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    
-    /* 3. ELIMINAR CUALQUIER ELEMENTO FLOTANTE DE STREAMLIT */
-    #MainMenu, footer, .stDeployButton {
-        display: none !important;
-        visibility: hidden !important;
+        height: 0px !important;
+        width: 0px !important;
     }
 
-    /* 4. FORZAR FONDO NEGRO PURO EN TODA LA APP */
-    .stApp {
+    /* ELIMINAR LOS ICONOS DE ABAJO (CORONA Y COMUNIDAD) */
+    [data-testid="stToolbar"], .stAppToolbar, [data-testid="stStatusWidget"], [data-testid="stStatusWidget"] div {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+    }
+
+    /* FORZAR FONDO NEGRO ABSOLUTO */
+    .stApp, .main, .block-container {
         background-color: #000000 !important;
         color: #ffffff !important;
     }
 
-    /* 5. AJUSTAR CONTENEDOR PARA ELIMINAR ESPACIOS BLANCOS */
-    .main .block-container {
+    /* ELIMINAR ESPACIOS BLANCOS Y LÍNEAS DE CARGA */
+    .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
-        margin-top: -40px !important;
+        margin-top: -50px !important; /* Esto tapa la línea de arriba */
     }
 
-    /* 6. OCULTAR EL BOTÓN DE CARGA/ESTADO QUE SALE EN MÓVILES */
-    div[data-testid="stStatusWidget"] {
-        display: none !important;
+    /* OCULTAR ELEMENTOS DE ESTADO EN MÓVIL */
+    div[class*="st-"] {
+        border: none !important;
     }
     
-    /* 7. ESTILO DE CHAT LIMPIO */
-    .stChatMessage {
-        background-color: #111111 !important;
-        border: 1px solid #222222 !important;
-        border-radius: 15px !important;
+    /* ESCONDER CUALQUIER TOOLTIP O POPUP DE STREAMLIT */
+    .stTooltipIcon, [data-testid="stTooltipHoverTarget"] {
+        display: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -74,10 +70,10 @@ def motor_omni_x(mensaje, img_b64=None, mime=None):
         r = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(payload), timeout=35)
         return r.json()['candidates'][0]['content']['parts'][0]['text']
     except:
-        return "Conexión segura."
+        return "Sistemas activos."
 
 # --- 3. INTERFAZ ---
-st.markdown("<h1 style='text-align: center; color: #4A90E2; font-size: 32px;'>♾️ OMNI-X</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #4A90E2; font-size: 32px; margin-top: 20px;'>♾️ OMNI-X</h1>", unsafe_allow_html=True)
 
 foto = st.file_uploader("", type=["jpg", "png", "jpeg"])
 if foto:
@@ -88,12 +84,14 @@ st.divider()
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Historial
 for m in st.session_state.messages:
     avatar = "♾️" if m["role"] == "assistant" else "👤"
     with st.chat_message(m["role"], avatar=avatar):
         if "https://image" in m["content"]: st.image(m["content"])
         else: st.markdown(m["content"])
 
+# Entrada
 if prompt := st.chat_input("Comando..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar="👤"): st.markdown(prompt)
