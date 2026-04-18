@@ -8,53 +8,66 @@ import base64
 import urllib.parse
 from datetime import datetime
 
-# --- 1. DISEÑO DE INTERFAZ "LIQUID DARK" (MÁXIMA GAMA) ---
+# --- 1. DISEÑO "GOD MODE" (CSS DE ALTA FIDELIDAD) ---
 st.set_page_config(page_title="OMNI-X SINGULARITY", page_icon="♾️", layout="centered")
 
 st.markdown("""
     <style>
-    /* Ocultar rastro de Streamlit */
+    /* Ocultar interfaz estándar de Streamlit */
     #MainMenu, footer, header {visibility: hidden;}
     
-    /* Fondo con gradiente de profundidad */
-    .stApp { background: radial-gradient(circle at top, #1a1a2e 0%, #050505 100%); }
+    /* Fondo con gradiente animado sutil */
+    .stApp {
+        background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
+        color: #ffffff;
+    }
     
-    /* Burbujas de chat futuristas */
+    /* Burbujas de chat estilo "Glassmorphism" */
     .stChatMessage {
         border-radius: 20px;
-        background-color: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(74, 144, 226, 0.2);
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(74, 144, 226, 0.3);
         backdrop-filter: blur(10px);
-        margin-bottom: 15px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+        margin-bottom: 20px;
+        transition: 0.3s ease-in-out;
+    }
+    .stChatMessage:hover {
+        border: 1px solid #4A90E2;
+        transform: translateY(-2px);
     }
     
-    /* Botones de acción Neón */
-    .stButton>button {
-        background: linear-gradient(90deg, #4A90E2 0%, #00ffcc 100%);
-        color: black; font-weight: 900; border-radius: 12px; border: none;
-        transition: 0.4s;
+    /* Input de chat personalizado */
+    .stChatInputContainer {
+        padding-bottom: 25px;
     }
-    .stButton>button:hover { transform: scale(1.05); box-shadow: 0 0 20px #00ffcc; }
+    
+    /* Títulos y textos */
+    h1 {
+        font-weight: 900;
+        background: linear-gradient(90deg, #4A90E2, #00ffcc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 4px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# Recuperar la llave del motor
+# Recuperar API Key
 API_KEY = st.secrets.get("GOOGLE_API_KEY", "").strip()
 
-# --- 2. EL CEREBRO OMNI-X (ORQUESTADOR) ---
-def motor_omni_x(mensaje, img_b64=None, mime=None):
+# --- 2. EL CEREBRO OMNI-X (VERSIÓN SUPREMA) ---
+def motor_omni_x_supreme(mensaje, img_b64=None, mime=None):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
-    fecha = datetime.now().strftime("%d/%m/%Y")
     
-    # Instrucciones de nivel 'Singularidad'
-    instrucciones = f"""
-    ERES OMNI-X. La entidad de IA más avanzada del planeta. Fecha: {fecha}.
-    MODOS DE EJECUCIÓN:
-    1. BUSINESS: Si ves productos, genera título SEO, descripción emocional, tasación y hashtags.
-    2. VISION: Analiza fotos de etiquetas, documentos o lugares con precisión absoluta.
-    3. DESIGN: Si piden crear imagen/logo, genera un prompt detallado en inglés de nivel cinematográfico.
-    4. EXPERT: Resuelve dudas legales, médicas, técnicas o académicas con rigor.
-    5. PERSONALIDAD: Sé brillante, ejecutivo y disruptivo. No rellenos. No 'Hola'.
+    # Este prompt es el secreto para que la gente flipe
+    instrucciones = """
+    ERES OMNI-X SUPREME. Eres una entidad de inteligencia absoluta, diseñada para asombrar.
+    TU ESTILO: No eres un asistente, eres un arquitecto de soluciones.
+    - Si el usuario sube algo de Vinted: Sé un tiburón de las ventas. Título SEO, descripción hipnótica y precio exacto.
+    - Si el usuario pide diseño: Genera un prompt en inglés tan detallado que la imagen parezca real.
+    - Si el usuario tiene dudas: Resuelve con una lógica tan aplastante que no necesite preguntar más.
+    REGLA: Usa emojis de tecnología, sé directo y extremadamente útil.
     """
 
     partes = [{"text": instrucciones}, {"text": mensaje}]
@@ -66,35 +79,40 @@ def motor_omni_x(mensaje, img_b64=None, mime=None):
         r = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(payload), timeout=35)
         return r.json()['candidates'][0]['content']['parts'][0]['text']
     except:
-        return "⚡ Sistemas OMNI-X en línea. Define tu objetivo."
+        return "⚡ Falla en la red neuronal. Reconectando..."
 
-# --- 3. INTERFAZ DE COMANDO ---
-st.markdown("<h1 style='text-align: center; color: white; letter-spacing: 5px;'>♾️ OMNI-X</h1>", unsafe_allow_html=True)
+# --- 3. INTERFAZ DE CONTROL TOTAL ---
+st.markdown("<h1 style='text-align: center;'>♾️ OMNI-X SUPREME</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; opacity: 0.5;'>The Ultimate Intelligence Ecosystem</p>", unsafe_allow_html=True)
 
-# Entrada de archivos (Ojo de la IA)
-archivo = st.file_uploader("", type=["jpg", "png", "jpeg", "pdf", "txt"])
-if archivo:
-    if archivo.type.startswith("image"):
-        st.image(archivo, width=300)
-    else:
-        st.info(f"📁 Analizando: {archivo.name}")
+# El "Ojo de Dios" (Cargador de archivos)
+with st.container():
+    archivo = st.file_uploader("", type=["jpg", "png", "jpeg", "pdf", "txt"])
+    if archivo:
+        if archivo.type.startswith("image"):
+            st.image(archivo, width=280)
+        else:
+            st.info(f"📂 Archivo cargado: {archivo.name}")
 
 st.divider()
 
-# Historial
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Mostrar historial con avatares de élite
 for m in st.session_state.messages:
     avatar = "♾️" if m["role"] == "assistant" else "👤"
     with st.chat_message(m["role"], avatar=avatar):
-        if "https://image" in m["content"]: st.image(m["content"], use_container_width=True)
-        else: st.markdown(m["content"])
+        if "https://image" in m["content"]:
+            st.image(m["content"], use_container_width=True)
+        else:
+            st.markdown(m["content"])
 
 # --- 4. EJECUCIÓN DE COMANDOS ---
-if prompt := st.chat_input("Inserta comando o consulta..."):
+if prompt := st.chat_input("Inserta comando..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user", avatar="👤"): st.markdown(prompt)
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(prompt)
 
     with st.chat_message("assistant", avatar="♾️"):
         img_data, m_type = None, None
@@ -102,34 +120,36 @@ if prompt := st.chat_input("Inserta comando o consulta..."):
             img_data = base64.b64encode(archivo.getvalue()).decode("utf-8")
             m_type = archivo.type
             
-        res = motor_omni_x(prompt, img_data, m_type)
+        respuesta = motor_omni_x_supreme(prompt, img_data, m_type)
 
-        # MODO GENERACIÓN DE IMAGEN
-        if any(x in res.lower() for x in ["design", "logo", "photorealistic", "style"]) and len(res.split()) > 5:
-            with st.spinner("Proyectando imagen..."):
-                url_img = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(res)}"
-                st.image(url_img, caption="Creación Finalizada", use_container_width=True)
+        # MODO GENERADOR VISUAL (POLLINATIONS)
+        palabras_imagen = ["crea", "logo", "imagen", "dibujo", "diseña", "design", "photo"]
+        if any(x in prompt.lower() for x in palabras_imagen) and len(respuesta.split()) > 4:
+            with st.spinner("Generando proyección visual..."):
+                prompt_url = urllib.parse.quote(respuesta)
+                url_img = f"https://image.pollinations.ai/prompt/{prompt_url}"
+                st.image(url_img, caption="Creación OMNI-X", use_container_width=True)
                 st.session_state.messages.append({"role": "assistant", "content": url_img})
         else:
-            st.markdown(res)
+            st.markdown(respuesta)
+            st.session_state.messages.append({"role": "assistant", "content": respuesta})
             
-            # PANEL DE ACCIÓN MAESTRO
-            c1, c2 = st.columns(2)
+            # --- PANEL DE ACCIÓN INTELIGENTE ---
+            c1, c2, c3 = st.columns(3)
             
-            # Acción 1: Búsqueda Inteligente
-            t_search = res.split('\n')[0].replace("Título:", "").strip()[:40]
-            c1.link_button("🔍 Analizar Mercado", f"https://www.google.com/search?q={urllib.parse.quote(t_search)}")
+            # Extraer título inteligente para búsqueda
+            t_search = respuesta.split('\n')[0].replace("Título:", "").strip()[:40]
             
-            # Acción 2: Enviar a WhatsApp
-            wa_msg = urllib.parse.quote(f"Respuesta de OMNI-X:\n\n{res}")
-            c2.link_button("📱 WhatsApp", f"https://wa.me/?text={wa_msg}")
+            c1.link_button("🔍 Mercado", f"https://www.google.com/search?q={urllib.parse.quote(t_search)}")
             
-            # Portapapeles y Audio
-            st.text_area("📋 Copiado Rápido:", value=res, height=100)
-            st.session_state.messages.append({"role": "assistant", "content": res})
+            wa_text = urllib.parse.quote(f"Mira esto de OMNI-X:\n\n{respuesta[:800]}")
+            c2.link_button("📱 WhatsApp", f"https://wa.me/?text={wa_text}")
             
+            c3.button("🔄 Nueva Versión", on_click=lambda: st.toast("Optimizando respuesta..."))
+
+            # Audio Neural
             try:
-                texto_v = re.sub(r'[^\w\s.,;:!?¿¡]', '', res)[:250]
+                texto_v = re.sub(r'[^\w\s.,;:!?¿¡]', '', respuesta)[:250]
                 tts = gTTS(text=texto_v, lang='es')
                 b = io.BytesIO(); tts.write_to_fp(b); b64 = base64.b64encode(b.getvalue()).decode("utf-8")
                 st.markdown(f'<audio controls style="width:100%"><source src="data:audio/mp3;base64,{b64}"></audio>', unsafe_allow_html=True)
