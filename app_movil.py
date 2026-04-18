@@ -6,43 +6,44 @@ import io
 import re
 import base64
 
-# --- 1. DISEÑO DE ÉLITE (CSS) ---
-st.set_page_config(page_title="CREAL OMNI PRO", page_icon="⚡", layout="centered")
+# --- 1. ESTÉTICA DE LUJO (DARK PREMIUM) ---
+st.set_page_config(page_title="CREAL OMNI BUSINESS", page_icon="💰", layout="centered")
 
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
-    .stFileUploader {
-        padding-top: 0px;
-        margin-bottom: -10px;
-    }
-    
-    .stChatMessage {
-        border-radius: 15px;
-        margin-bottom: 10px;
-        border: 1px solid #30363d;
-    }
+    .stApp {background-color: #050505;}
+    .stChatMessage {border-radius: 20px; border: 1px solid #1f2937;}
+    /* Botón de carga personalizado */
+    .stFileUploader {border: 2px dashed #4A90E2; border-radius: 15px; padding: 10px;}
     </style>
 """, unsafe_allow_html=True)
 
-# Recuperar API Key
 API_KEY = st.secrets.get("GOOGLE_API_KEY", "").strip()
 if not API_KEY:
-    st.error("🔑 Error: Configura la API KEY en Secrets.")
+    st.error("🔑 Configura la API KEY.")
     st.stop()
 
-# --- 2. MOTOR DE IA ---
-def llamar_ia_pro(mensaje_usuario, img_b64=None, mime=None):
+# --- 2. EL CEREBRO MILLONARIO ---
+def llamar_ia_business(mensaje_usuario, img_b64=None, mime=None):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
     
+    # Este 'prompt' está diseñado para superar a cualquier IA comercial
     instrucciones_maestras = """
-    Eres CREAL OMNI, una IA de élite.
-    Si recibes una imagen de ropa: Analízala para Vinted. Da título, descripción, precio y hashtags.
-    Si recibes texto: Sé brillante, breve y útil.
-    No menciones que eres una IA a menos que te pregunten. Sé directo.
+    Eres CREAL OMNI BUSINESS, la IA más potente para generar beneficios. 
+    Tu objetivo es que el usuario GANE DINERO.
+    
+    SI RECIBES UNA FOTO DE ROPA/OBJETO:
+    - No seas un robot. Sé un experto en marketing de lujo.
+    - TÍTULO: Debe ser irresistible y SEO optimizado.
+    - DESCRIPCIÓN: Usa la técnica AIDA (Atención, Interés, Deseo, Acción). Resalta por qué esta prenda es única.
+    - TASACIÓN PRO: Analiza la marca y el estado. Da un precio de 'Venta Rápida' y un precio de 'Máximo Beneficio'.
+    - CONSEJO DE ORO: Da un truco extra (ej: 'Haz la foto con luz natural para venderla un 20% más cara').
+    
+    SI ES TEXTO GENERAL:
+    - Sé brillante, breve y ofrece ideas para monetizar o mejorar la productividad.
     """
 
     partes = [{"text": instrucciones_maestras}, {"text": mensaje_usuario}]
@@ -54,30 +55,27 @@ def llamar_ia_pro(mensaje_usuario, img_b64=None, mime=None):
         r = requests.post(url, headers={'Content-Type': 'application/json'}, data=json.dumps(payload), timeout=30)
         return r.json()['candidates'][0]['content']['parts'][0]['text']
     except:
-        return "✨ Sistemas listos. ¿En qué puedo ayudarte?"
+        return "💰 Sistemas listos. Vamos a generar valor."
 
 # --- 3. INTERFAZ ---
-st.markdown("<h1 style='text-align: center;'>⚡ CREAL OMNI <span style='color:#4A90E2;'>PRO</span></h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: white;'>⚡ CREAL OMNI <span style='color:#4A90E2;'>BUSINESS</span></h1>", unsafe_allow_html=True)
 
-# Subida de fotos
 with st.container():
-    foto = st.file_uploader("📸 ANALIZAR IMAGEN", type=["jpg", "png", "jpeg"])
+    foto = st.file_uploader("📸 ESCANEAR PARA MONETIZAR", type=["jpg", "png", "jpeg"])
     if foto:
-        st.image(foto, width=250)
+        st.image(foto, width=300)
 
 st.divider()
 
-# Historial de chat (Mensaje de bienvenida modificado)
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "Sistemas listos. ¿En qué puedo ayudarte hoy?"}]
+    st.session_state.messages = [{"role": "assistant", "content": "Sistemas listos para el negocio. ¿Qué vamos a vender hoy?"}]
 
 for m in st.session_state.messages:
-    avatar_icon = "⚡" if m["role"] == "assistant" else "👤"
-    with st.chat_message(m["role"], avatar=avatar_icon):
+    avatar = "⚡" if m["role"] == "assistant" else "👤"
+    with st.chat_message(m["role"], avatar=avatar):
         st.markdown(m["content"])
 
-# Entrada de usuario
-if prompt := st.chat_input("Escribe aquí..."):
+if prompt := st.chat_input("Escribe tu consulta o detalle de producto..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
@@ -88,10 +86,10 @@ if prompt := st.chat_input("Escribe aquí..."):
             img_data = base64.b64encode(foto.getvalue()).decode("utf-8")
             m_type = foto.type
             
-        respuesta = llamar_ia_pro(prompt, img_data, m_type)
+        respuesta = llamar_ia_business(prompt, img_data, m_type)
         st.markdown(respuesta)
         
-        # Audio
+        # Audio de alta fidelidad
         try:
             texto_voz = re.sub(r'[^\w\s.,;:!?¿¡]', '', respuesta)[:250]
             tts = gTTS(text=texto_voz, lang='es')
