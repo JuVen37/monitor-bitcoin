@@ -4,8 +4,8 @@ import json
 from gtts import gTTS
 
 # --- 1. CONFIGURACIÓN ---
-# PEGA AQUÍ TU LLAVE NUEVA (LA QUE EMPIEZA POR AIzaSy)
-API_KEY = "AIzaSyCrNSFPTNRwg-cA8Ea_PivGsvQntQ0ioZo"
+# Esta es tu clave que ya sabemos que es la buena
+API_KEY = "AIzaSyAgR4Uw2AFjiZoKb2DiXY2BmGV8HTrU2xc"
 
 def hablar_con_gemini(mensaje):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
@@ -17,7 +17,7 @@ def hablar_con_gemini(mensaje):
         if r.status_code == 200:
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         else:
-            return f"Error de Google: {r.status_code}. Espera 2 minutos, la clave se está activando."
+            return f"Error: {r.status_code}. Google dice: {r.text}"
     except:
         return "Error de conexión."
 
@@ -34,7 +34,7 @@ if "messages" not in st.session_state:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if p := st.chat_input("Escribe algo..."):
+if p := st.chat_input("Escribe algo aquí..."):
     st.session_state.messages.append({"role": "user", "content": p})
     with st.chat_message("user"): st.markdown(p)
 
@@ -43,9 +43,13 @@ if p := st.chat_input("Escribe algo..."):
         st.markdown(res)
         
         if st.button("🔊 Enviar Audio"):
-            tts = gTTS(text=res[:200], lang='es')
-            tts.save("voice.mp3")
-            token = "8761770621:AAF1WKM_Cz8PPZ1dzro49VLsHdrrnCfZdXc"
-            requests.post(f"https://api.telegram.org/bot{token}/sendAudio?chat_id={tele_id}", files={'audio': open("voice.mp3", "rb")})
+            try:
+                tts = gTTS(text=res[:200], lang='es')
+                tts.save("voice.mp3")
+                token = "8761770621:AAF1WKM_Cz8PPZ1dzro49VLsHdrrnCfZdXc"
+                requests.post(f"https://api.telegram.org/bot{token}/sendAudio?chat_id={tele_id}", files={'audio': open("voice.mp3", "rb")})
+                st.success("¡Audio enviado!")
+            except:
+                st.error("Error con el audio.")
 
     st.session_state.messages.append({"role": "assistant", "content": res})
